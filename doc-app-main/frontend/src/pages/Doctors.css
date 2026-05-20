@@ -1,0 +1,580 @@
+/* Medical Blue — Doctors Page — Final Premium Pass */
+
+.doctors-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 3rem 0 6rem;
+}
+
+.doctors-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.doctors-header h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.03em;
+}
+
+.doctors-subtitle {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+/* Filters */
+.doctors-filters {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  margin-bottom: 3rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0 20px;
+  transition: all 0.3s;
+  box-shadow: var(--shadow-sm);
+}
+
+.search-box:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.search-input {
+  flex: 1;
+  padding: 16px 0;
+  border: none;
+  background: transparent;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.filter-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 4px;
+}
+
+.filter-select {
+  padding: 12px 18px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filter-select:hover { border-color: var(--accent-primary); }
+
+/* Stats */
+.doctors-stats {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.stat-item {
+  background: #fff;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-item .stat-number {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+}
+
+.stat-item .stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Doctors Grid */
+.doctors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2.5rem;
+}
+
+.doctor-card.card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: #fff;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.25, 1);
+}
+
+.doctor-card.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 22px 42px rgba(0, 105, 192, 0.16);
+}
+
+.skeleton-card {
+  min-height: 520px;
+  animation: pulseSkeleton 1.2s ease-in-out infinite;
+}
+
+.skeleton-image {
+  height: 260px;
+  background: linear-gradient(90deg, rgba(226,232,240,0.6), rgba(226,232,240,0.95), rgba(226,232,240,0.6));
+  background-size: 300% 100%;
+  animation: skeletonLoading 1.5s infinite;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, rgba(226,232,240,0.8), rgba(226,232,240,0.4), rgba(226,232,240,0.8));
+  background-size: 300% 100%;
+  animation: skeletonLoading 1.5s infinite;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.skeleton-line.title { width: 70%; height: 24px; }
+.skeleton-line.subtitle { width: 50%; }
+.skeleton-line.rating { width: 55%; }
+.skeleton-line.small { width: 100%; height: 12px; }
+.skeleton-line.small + .skeleton-line.small { margin-top: 10px; }
+
+.skeleton-grid {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.skeleton-button {
+  width: 100%;
+  height: 46px;
+  background: linear-gradient(90deg, rgba(226,232,240,0.85), rgba(226,232,240,0.5), rgba(226,232,240,0.85));
+  border-radius: 14px;
+  animation: skeletonLoading 1.5s infinite;
+}
+
+@keyframes skeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulseSkeleton {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.doctor-image {
+  height: 260px;
+  overflow: hidden;
+  position: relative;
+}
+
+.doctor-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.doctor-card.card:hover .doctor-image img {
+  transform: scale(1.08);
+}
+
+.availability-badge {
+  position: absolute;
+  top: 15px; left: 15px;
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.availability-badge.available {
+  background: rgba(34, 197, 94, 0.85);
+  color: #fff;
+}
+
+.availability-badge.unavailable {
+  background: rgba(239, 68, 68, 0.85);
+  color: #fff;
+}
+
+.doctor-info {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex-grow: 1;
+}
+
+.doctor-specialty {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: fit-content;
+}
+
+.doctor-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0.25rem 0;
+}
+
+.doctor-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.star { color: #f59e0b; font-size: 0.9rem; }
+.rating-text { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+.reviews-count { font-size: 0.85rem; color: var(--text-muted); }
+
+.doctor-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.detail-icon { color: var(--accent-primary); font-size: 1rem; }
+
+.doctor-info .btn {
+  margin-top: auto;
+  border-radius: var(--radius-md);
+}
+
+/* 
+  GLASSMORPHIC MODAL WIZARD - Ported from Appointments 
+*/
+.glass-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.glass-modal {
+  width: 100%;
+  max-width: 900px;
+  height: 600px;
+  background: #ffffff;
+  border-radius: 24px;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.premium-booking-modal {
+  max-width: 950px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 1.5rem; right: 1.5rem;
+  background: #f1f5f9;
+  border: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  z-index: 10;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.close-btn:hover { background: #e2e8f0; color: #000; transform: scale(1.1); }
+
+/* Left Sidebar - Doctor Profile */
+.doctor-profile-sidebar {
+  width: 320px;
+  background: var(--accent-gradient);
+  color: #fff;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.sidebar-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid rgba(255,255,255,0.2);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.sidebar-avatar img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+.doctor-profile-sidebar h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-specialty {
+  background: rgba(255,255,255,0.15);
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 2.5rem;
+}
+
+.sidebar-stats {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: auto;
+  background: rgba(0,0,0,0.1);
+  padding: 1.5rem;
+  border-radius: 16px;
+}
+
+.sidebar-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 0.75rem;
+}
+
+.sidebar-stat-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sidebar-stat-row span {
+  opacity: 0.8;
+}
+
+/* Right Content Area - Booking Form */
+.modal-content-area {
+  flex: 1;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #ffffff;
+  overflow-y: auto;
+}
+
+.form-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+}
+
+.premium-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.premium-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+.premium-input:focus {
+  background: #fff;
+  border-color: var(--accent-primary);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 105, 192, 0.1);
+}
+
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.time-chip {
+  padding: 12px 10px;
+  background: #fff;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.time-chip:hover {
+  border-color: #94a3b8;
+}
+
+.time-chip.selected {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+.radio-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.radio-card {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radio-card input { display: none; }
+
+.radio-card.selected {
+  border-color: var(--accent-primary);
+  background: rgba(0, 105, 192, 0.04);
+  color: var(--accent-primary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.ml-auto { margin-left: auto; }
+.mt-4 { margin-top: 1rem; }
+.mt-6 { margin-top: 1.5rem; }
+
+/* Loaders & Animations */
+.spinner-small {
+  display: inline-block;
+  width: 20px; height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+.scale-in { animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.slide-in-right { animation: slideInRight 0.4s ease forwards; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .glass-modal { flex-direction: column; height: auto; max-height: 90vh; }
+  .doctor-profile-sidebar { width: 100%; padding: 1.5rem; flex-direction: row; text-align: left; align-items: center; gap: 1.5rem; }
+  .sidebar-avatar { width: 80px; height: 80px; margin-bottom: 0; }
+  .sidebar-specialty { margin-bottom: 0; }
+  .sidebar-stats { display: none; }
+  .time-slots-grid { grid-template-columns: repeat(3, 1fr); }
+  .filter-controls { grid-template-columns: 1fr; }
+  .doctors-stats { flex-direction: column; gap: 1rem; }
+}
+
+@media (max-width: 600px) {
+  .time-slots-grid { grid-template-columns: repeat(2, 1fr); }
+  .radio-group { flex-direction: column; }
+  .doctor-profile-sidebar { flex-direction: column; text-align: center; }
+  .sidebar-avatar { margin-bottom: 1rem; }
+}

@@ -1,0 +1,260 @@
+.healthy-blog-page {
+  min-height: 100vh;
+  padding: 4rem 0 6rem;
+  background: linear-gradient(180deg, rgba(240,248,255,0.78) 0%, rgba(248,250,252,1) 100%);
+}
+
+.blog-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(270px, 360px);
+  gap: 2rem;
+  align-items: stretch;
+  padding: 3.5rem;
+  border-radius: 32px;
+  background: linear-gradient(135deg, rgba(0,105,192,0.16), rgba(0,170,255,0.14));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.85);
+  box-shadow: 0 30px 70px rgba(0, 105, 192, 0.08);
+  margin-bottom: 2.5rem;
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.85rem;
+}
+
+.blog-hero h1 {
+  font-size: clamp(2.8rem, 4vw, 4rem);
+  line-height: 1.05;
+  max-width: 720px;
+}
+
+.blog-hero p {
+  color: var(--text-secondary);
+  max-width: 620px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.hero-metrics {
+  display: grid;
+  gap: 1rem;
+}
+
+.metric-card {
+  padding: 1.35rem 1.5rem;
+  background: #fff;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 16px 35px rgba(0, 105, 192, 0.08);
+}
+
+.metric-card span {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+}
+
+.metric-card p {
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.blog-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.blog-search input {
+  width: 100%;
+  min-width: 280px;
+}
+
+.category-pillset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.category-pill {
+  padding: 0.85rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.category-pill.active,
+.category-pill:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: rgba(0, 105, 192, 0.25);
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 1.75rem;
+}
+
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2rem;
+  border-radius: 28px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 20px 45px rgba(0, 105, 192, 0.08);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.blog-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 28px 65px rgba(0, 105, 192, 0.12);
+}
+
+.blog-card.featured {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(0, 105, 192, 0.14), rgba(0, 170, 255, 0.12));
+}
+
+.blog-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-badge {
+  display: inline-flex;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(0, 105, 192, 0.08);
+  color: var(--accent-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.action-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  color: var(--accent-primary);
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 105, 192, 0.12);
+}
+
+.blog-card h2 {
+  font-size: 1.55rem;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.blog-card p {
+  color: var(--text-secondary);
+}
+
+.blog-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.author-chip {
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  background: rgba(0, 105, 192, 0.08);
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.meta-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.empty-state-card {
+  text-align: center;
+  padding: 3rem;
+  background: #fff;
+  border-radius: 28px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 20px 45px rgba(0, 105, 192, 0.08);
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 1080px) {
+  .blog-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .healthy-blog-page {
+    padding: 3rem 0 4rem;
+  }
+
+  .blog-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .blog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .blog-hero {
+    padding: 2rem;
+  }
+
+  .metric-card {
+    padding: 1rem 1.2rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+}

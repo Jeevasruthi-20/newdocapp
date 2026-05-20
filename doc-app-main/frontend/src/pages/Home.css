@@ -1,0 +1,206 @@
+/* Medical Blue — Home Page */
+
+.home-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Intro */
+.intro-section {
+  background: linear-gradient(160deg, #f0f6ff 0%, #ffffff 100%);
+  text-align: center;
+  padding: 5rem 1.5rem 4rem;
+}
+
+.intro-content { max-width: 750px; margin: 0 auto; }
+
+.intro-text {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 3rem;
+}
+
+.intro-features {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 1.5rem;
+}
+
+.feature-item {
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+  min-width: 140px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.feature-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(0,105,192,0.3); color: var(--accent-primary); }
+.feature-icon { font-size: 2.2rem; }
+
+/* How It Works */
+.how-it-works {
+  background: var(--bg-primary);
+  padding: 5rem 1.5rem;
+}
+
+.steps-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 3rem auto 0;
+}
+
+.step {
+  background: var(--bg-secondary);
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  transition: all 0.25s ease;
+}
+.step:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: rgba(0,105,192,0.3); }
+
+.step-number {
+  width: 64px; height: 64px;
+  margin: 0 auto 1.5rem;
+  background: var(--accent-gradient);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 1.7rem; font-weight: 800; color: white;
+  box-shadow: 0 4px 14px rgba(0,105,192,0.3);
+}
+
+.step-content h3 { margin-bottom: 0.75rem; font-size: 1.15rem; color: var(--text-primary); }
+.step-content p  { font-size: 0.97rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+/* Features */
+.features-section {
+  background: var(--bg-secondary);
+  padding: 5rem 1.5rem;
+}
+
+.section-title {
+  font-size: 2rem; font-weight: 800;
+  color: var(--text-primary); text-align: center; margin-bottom: 0.75rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.75rem;
+  max-width: 1200px;
+  margin: 3rem auto 0;
+}
+
+.feature-card {
+  background: var(--bg-primary);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+  text-align: center;
+}
+.feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(0,105,192,0.25); }
+
+.feature-icon-large {
+  font-size: 2.75rem; margin-bottom: 1.25rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 72px; height: 72px;
+  background: var(--accent-light);
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(0,105,192,0.15);
+}
+
+.feature-card h3 { margin-bottom: 0.75rem; font-size: 1.15rem; color: var(--text-primary); }
+.feature-card p  { font-size: 0.97rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+/* Testimonials */
+.testimonials {
+  background: var(--bg-primary);
+  padding: 5rem 1.5rem;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.75rem;
+  max-width: 1100px;
+  margin: 3rem auto 0;
+}
+
+.testimonial-card {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.testimonial-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: rgba(0,105,192,0.25); }
+
+.testimonial-content p {
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+
+.testimonial-author { display: flex; align-items: center; gap: 1rem; }
+
+.author-avatar {
+  font-size: 2.5rem;
+  width: 56px; height: 56px;
+  background: var(--accent-light);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.author-info h4 { margin: 0 0 2px; font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.author-info span { font-size: 0.85rem; color: var(--accent-primary); font-weight: 600; }
+
+/* CTA */
+.cta-section {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #00aaff 100%);
+  padding: 5rem 1.5rem;
+  text-align: center;
+  color: white;
+}
+
+.cta-title { font-size: 2.5rem; margin-bottom: 1rem; font-weight: 800; color: white; -webkit-text-fill-color: white; background: none; }
+.cta-text  { font-size: 1.15rem; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto; color: rgba(255,255,255,0.85); }
+
+.cta-actions {
+  display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap;
+}
+
+.cta-actions .primary-btn {
+  background: white; color: var(--accent-primary);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+.cta-actions .primary-btn:hover { background: #f0f6ff; transform: translateY(-2px); }
+
+.cta-actions .secondary-btn {
+  background: transparent; border: 2px solid rgba(255,255,255,0.7); color: white;
+}
+.cta-actions .secondary-btn:hover { background: rgba(255,255,255,0.12); border-color: white; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .intro-features  { flex-direction: column; align-items: center; }
+  .steps-container { grid-template-columns: 1fr; }
+  .features-grid, .testimonials-grid { grid-template-columns: 1fr; }
+  .cta-actions { flex-direction: column; align-items: center; }
+  .cta-actions .btn { width: 100%; max-width: 300px; }
+  .cta-title { font-size: 2rem; }
+}
