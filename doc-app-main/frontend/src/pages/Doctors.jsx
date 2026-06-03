@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAppointments } from "../context/AppointmentsContext";
+import { useAuth } from "../context/AuthContext";
 import { toast } from "react-hot-toast";
 import "./Doctors.css";
 import doctor1 from "../assets/doctors/doctor1.jpeg";
@@ -35,7 +37,25 @@ const timeSlots = [
   "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"
 ];
 
+const to24Hour = (time12) => {
+  const match = time12.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return time12;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const period = match[3].toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return `${String(hours).padStart(2, '0')}:${minutes}`;
+};
+
+const addMinutes = (time24, mins) => {
+  const [h, m] = time24.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
+
 const Doctors = () => {
+  const { t } = useTranslation();
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("rating");
@@ -54,6 +74,7 @@ const Doctors = () => {
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(true);
 
   const { addAppointment } = useAppointments();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const specialties = [
@@ -68,6 +89,20 @@ const Doctors = () => {
     const timer = setTimeout(() => setIsLoadingDoctors(false), 280);
     return () => clearTimeout(timer);
   }, [selectedSpecialty, searchTerm, sortBy]);
+
+  const getSpecialtyLabel = (spec) => {
+    switch (spec) {
+      case "all": return t('specialty.all');
+      case "General Physician": return t('specialty.general');
+      case "Gynecologist": return t('specialty.gynecologist');
+      case "Dermatologist": return t('specialty.dermatologist');
+      case "Cardiologist": return t('specialty.cardiologist');
+      case "Pediatrician": return t('specialty.pediatrician');
+      case "Orthopedic Surgeon": return t('specialty.orthopedic');
+      case "Others": return t('specialty.others');
+      default: return t(`specialty.${spec}`, spec);
+    }
+  };
 
   const filteredDoctors = doctors
     .filter(doctor => {
@@ -108,55 +143,65 @@ const Doctors = () => {
     }, 300); // Wait for animation
   };
 
-  const handleBookAppointment = (e) => {
+  const handleBookAppointment = async (e) => {
     e.preventDefault();
-    
+
+    if (!isAuthenticated()) {
+      toast.error('Please log in to book an appointment');
+      navigate('/login', { state: { from: '/doctors' } });
+      return;
+    }
+
     if (!bookingData.date || !bookingData.time) {
       return toast.error("Please select both date and time.");
     }
-    
-    const now = new Date();
-    const selectedDateTime = new Date(`${bookingData.date}T${bookingData.time}`);
-    
-    // Fallback validation (min attribute on input handles most)
+
     if (bookingData.date < today) {
       return toast.error("You cannot book an appointment in the past.");
     }
-    
+
     if (!bookingData.reason || bookingData.reason.trim().length < 5) {
       return toast.error("Please provide a brief reason for the visit.");
     }
 
     setIsSubmitting(true);
+    const startTime = to24Hour(bookingData.time);
 
-    // Simulate API delay
-    setTimeout(() => {
-      const newAppointment = {
-        id: Date.now(),
-        doctorName: selectedDoctor.name,
-        specialty: selectedDoctor.specialty,
+    try {
+      const doctorId = (selectedDoctor && typeof selectedDoctor.id === 'string' && /^[a-f0-9]{24}$/.test(selectedDoctor.id))
+        ? selectedDoctor.id
+        : null;
+
+      await addAppointment({
+        doctorId,
         date: bookingData.date,
-        time: bookingData.time,
-        type: bookingData.type,
-        reason: bookingData.reason,
-        status: "pending"
-      };
-      
-      addAppointment(newAppointment);
-      setIsSubmitting(false);
+        startTime,
+        endTime: addMinutes(startTime, 30),
+        reason: bookingData.reason.trim(),
+        appointmentType: 'consultation',
+      });
       setShowBookingModal(false);
       toast.success("Appointment booked successfully!");
-      navigate("/appointments");
-    }, 1500);
+      navigate("/appointments", { state: { booked: true } });
+    } catch (err) {
+      if (err.status === 401) {
+        toast.error('Please log in to book an appointment');
+        navigate('/login', { state: { from: '/doctors' } });
+      } else {
+        toast.error(err.message || err.data?.message || 'Booking failed. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="doctors-page">
       <div className="container">
         <div className="doctors-header">
-          <h1 className="section-title">Find Your Doctor</h1>
+          <h1 className="section-title">{t('doctors.findYourDoctor')}</h1>
           <p className="doctors-subtitle">
-            Connect with trusted healthcare professionals and book appointments with ease
+            {t('doctors.subtitle')}
           </p>
         </div>
 
@@ -170,7 +215,7 @@ const Doctors = () => {
               </svg>
               <input
                 type="text"
-                placeholder="Search doctors by name or specialty..."
+                placeholder={t('doctors.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="search-input"
@@ -180,7 +225,7 @@ const Doctors = () => {
 
           <div className="filter-controls">
             <div className="filter-group">
-              <label className="filter-label">Specialty:</label>
+              <label className="filter-label">{t('doctors.specialty')}</label>
               <select
                 value={selectedSpecialty}
                 onChange={(e) => setSelectedSpecialty(e.target.value)}
@@ -188,22 +233,22 @@ const Doctors = () => {
               >
                 {specialties.map(specialty => (
                   <option key={specialty} value={specialty}>
-                    {specialty === "all" ? "All Specialties" : specialty}
+                    {getSpecialtyLabel(specialty)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="filter-group">
-              <label className="filter-label">Sort by:</label>
+              <label className="filter-label">{t('doctors.sortBy')}</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="filter-select"
               >
-                <option value="rating">Highest Rating</option>
-                <option value="experience">Most Experience</option>
-                <option value="name">Name A-Z</option>
+                <option value="rating">{t('doctors.highestRating')}</option>
+                <option value="experience">{t('doctors.mostExperience')}</option>
+                <option value="name">{t('doctors.nameAZ')}</option>
               </select>
             </div>
           </div>
@@ -213,15 +258,15 @@ const Doctors = () => {
         <div className="doctors-stats">
           <div className="stat-item">
             <span className="stat-number">{filteredDoctors.length}</span>
-            <span className="stat-label">Doctors Found</span>
+            <span className="stat-label">{t('doctors.doctorsFound')}</span>
           </div>
           <div className="stat-item">
             <span className="stat-number">{doctors.filter(d => d.available).length}</span>
-            <span className="stat-label">Available Now</span>
+            <span className="stat-label">{t('doctors.availableNow')}</span>
           </div>
           <div className="stat-item">
             <span className="stat-number">{specialties.length - 1}</span>
-            <span className="stat-label">Specialties</span>
+            <span className="stat-label">{t('doctors.specialtiesCount')}</span>
           </div>
         </div>
 
@@ -250,13 +295,13 @@ const Doctors = () => {
                 <div className="doctor-image">
                   <img src={doctor.img} alt={doctor.name} />
                   <div className={`availability-badge ${doctor.available ? 'available' : 'unavailable'}`}>
-                    {doctor.available ? 'Available' : 'Unavailable'}
+                    {doctor.available ? t('doctors.available') : t('doctors.unavailable')}
                   </div>
                 </div>
                 
                 <div className="doctor-info">
                   <h3 className="doctor-name">{doctor.name}</h3>
-                  <p className="doctor-specialty">{doctor.specialty}</p>
+                  <p className="doctor-specialty">{getSpecialtyLabel(doctor.specialty)}</p>
                   
                   <div className="doctor-rating">
                     <div className="stars">
@@ -266,7 +311,7 @@ const Doctors = () => {
                         </span>
                       ))}
                     </div>
-                    <span className="rating-text">{doctor.rating} ({doctor.reviews} reviews)</span>
+                    <span className="rating-text">{doctor.rating} ({doctor.reviews} {t('common.share') === 'பகிர்' ? 'மதிப்புரைகள்' : 'reviews'})</span>
                   </div>
                   
                   <div className="doctor-details">
@@ -281,7 +326,7 @@ const Doctors = () => {
                     onClick={() => handleOpenBookingModal(doctor)}
                     disabled={!doctor.available}
                   >
-                    {doctor.available ? 'Book Appointment' : 'Unavailable'}
+                    {doctor.available ? t('doctors.bookAppointment') : t('doctors.unavailable')}
                   </button>
                 </div>
               </div>
@@ -293,8 +338,8 @@ const Doctors = () => {
         {!isLoadingDoctors && filteredDoctors.length === 0 && (
           <div className="no-results">
             <div className="no-results-icon">🔍</div>
-            <h3>No doctors found</h3>
-            <p>Try adjusting your search criteria or filters</p>
+            <h3>{t('doctors.noDoctors')}</h3>
+            <p>{t('doctors.noDoctorsSub')}</p>
           </div>
         )}
 
@@ -314,11 +359,11 @@ const Doctors = () => {
                 <img src={selectedDoctor.img} alt={selectedDoctor.name} />
               </div>
               <h2>{selectedDoctor.name}</h2>
-              <div className="sidebar-specialty">{selectedDoctor.specialty}</div>
+              <div className="sidebar-specialty">{getSpecialtyLabel(selectedDoctor.specialty)}</div>
               
               <div className="sidebar-stats">
                 <div className="sidebar-stat-row">
-                  <span>Experience</span>
+                  <span>{t('doctors.experience')}</span>
                   <strong>{selectedDoctor.experience}</strong>
                 </div>
                 <div className="sidebar-stat-row">
@@ -326,7 +371,7 @@ const Doctors = () => {
                   <strong>⭐ {selectedDoctor.rating}</strong>
                 </div>
                 <div className="sidebar-stat-row">
-                  <span>Consultation Fee</span>
+                  <span>{t('doctors.consultationFee')}</span>
                   <strong>{selectedDoctor.consultationFee}</strong>
                 </div>
               </div>
@@ -334,12 +379,12 @@ const Doctors = () => {
 
             {/* Right Side: Booking Form */}
             <div className="modal-content-area">
-              <h3 className="form-title">Schedule Visit</h3>
+              <h3 className="form-title">{t('doctors.scheduleVisit')}</h3>
               
               <form onSubmit={handleBookAppointment} className="premium-form slide-in-right">
                 
                 <div className="form-group">
-                  <label>Appointment Date</label>
+                  <label>{t('doctors.appointmentDate')}</label>
                   <input 
                     type="date" 
                     className="premium-input"
@@ -351,7 +396,7 @@ const Doctors = () => {
                 </div>
 
                 <div className="form-group mt-4">
-                  <label>Select Time Slot</label>
+                  <label>{t('doctors.selectTimeSlot')}</label>
                   <div className="time-slots-grid">
                     {timeSlots.map(time => (
                       <div 
@@ -366,25 +411,25 @@ const Doctors = () => {
                 </div>
 
                 <div className="form-group mt-4">
-                  <label>Visit Type</label>
+                  <label>{t('doctors.visitType')}</label>
                   <div className="radio-group">
                     <label className={`radio-card ${bookingData.type === 'in-person' ? 'selected' : ''}`}>
                       <input type="radio" name="type" value="in-person" checked={bookingData.type === 'in-person'} onChange={(e) => setBookingData({...bookingData, type: e.target.value})} />
-                      🏥 In-Person
+                      {t('doctors.inPerson')}
                     </label>
                     <label className={`radio-card ${bookingData.type === 'video-call' ? 'selected' : ''}`}>
                       <input type="radio" name="type" value="video-call" checked={bookingData.type === 'video-call'} onChange={(e) => setBookingData({...bookingData, type: e.target.value})} />
-                      💻 Video Call
+                      {t('doctors.videoCall')}
                     </label>
                   </div>
                 </div>
 
                 <div className="form-group mt-4">
-                  <label>Reason for Visit</label>
+                  <label>{t('doctors.reasonForVisit')}</label>
                   <textarea 
                     className="premium-input"
                     rows="2"
-                    placeholder="Briefly describe your symptoms..."
+                    placeholder={t('doctors.symptomsPlaceholder')}
                     value={bookingData.reason}
                     onChange={(e) => setBookingData({...bookingData, reason: e.target.value})}
                     required
@@ -392,9 +437,9 @@ const Doctors = () => {
                 </div>
 
                 <div className="modal-actions mt-6">
-                  <button type="button" className="btn outline-btn" onClick={handleCloseBookingModal}>Cancel</button>
+                  <button type="button" className="btn outline-btn" onClick={handleCloseBookingModal}>{t('common.cancel')}</button>
                   <button type="submit" className="btn primary-btn ml-auto" disabled={isSubmitting}>
-                    {isSubmitting ? <span className="spinner-small"></span> : "Confirm Appointment"}
+                    {isSubmitting ? <span className="spinner-small"></span> : t('doctors.confirmAppointment')}
                   </button>
                 </div>
 

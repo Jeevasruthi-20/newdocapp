@@ -1,47 +1,60 @@
-// AppointmentsContext.js
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { apiJson, getAccessToken } from '../lib/api';
+import { useAuth } from './AuthContext';
+import { normalizeAppointment } from '../utils/appointmentHelpers';
 
 const AppointmentsContext = createContext();
 
 export const AppointmentsProvider = ({ children }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { currentUser } = useAuth();
 
-  // Fetch appointments from API
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
+    if (!currentUser) {
+      setAppointments([]);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/appointments/user");
-      const data = await res.json();
-      if (res.ok) setAppointments(data);
+      const data = await apiJson('/api/appointments/user');
+      setAppointments(Array.isArray(data) ? data.map(normalizeAppointment) : []);
     } catch (err) {
-      console.error("Failed to fetch appointments:", err);
+      console.error('Failed to fetch appointments:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, [fetchAppointments]);
 
-  const addAppointment = (appointment) => {
-    setAppointments((prev) => [appointment, ...prev]);
+  const addAppointment = async (appointmentData) => {
+    if (!currentUser) {
+      const err = new Error('Please log in to book an appointment.');
+      err.status = 401;
+      throw err;
+    }
+    if (!getAccessToken()) {
+      const err = new Error('Your session expired. Please log in again.');
+      err.status = 401;
+      throw err;
+    }
+    const data = await apiJson('/api/appointments', {
+      method: 'POST',
+      body: JSON.stringify(appointmentData),
+    });
+    const normalized = normalizeAppointment(data);
+    setAppointments((prev) => [normalized, ...prev]);
+    return normalized;
   };
 
   const cancelAppointment = async (id) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/appointments/${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setAppointments(prev => prev.map(apt => 
-          apt._id === id ? { ...apt, status: 'cancelled' } : apt
-        ));
-      }
-    } catch (err) {
-      console.error("Failed to cancel appointment:", err);
-    }
+    await apiJson(`/api/appointments/${id}`, { method: 'DELETE' });
+    setAppointments((prev) =>
+      prev.map((apt) => (apt._id === id ? { ...apt, status: 'cancelled' } : apt))
+    );
   };
 
   return (
@@ -53,7 +66,5 @@ export const AppointmentsProvider = ({ children }) => {
   );
 };
 
-// Custom hook
 export const useAppointments = () => useContext(AppointmentsContext);
-
 export default AppointmentsContext;

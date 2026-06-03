@@ -4,9 +4,8 @@ const appointmentSchema = new mongoose.Schema({
   // Basic Information
   appointmentNumber: {
     type: String,
-    required: true,
     unique: true,
-    index: true
+    index: true,
   },
   
   // Participants
@@ -124,14 +123,16 @@ const appointmentSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Generate appointment number before saving
-appointmentSchema.pre('save', async function(next) {
-  if (this.isNew) {
+// Generate appointment number before validation/save
+const assignAppointmentNumber = async function () {
+  if (this.isNew && !this.appointmentNumber) {
     const count = await this.constructor.countDocuments();
     this.appointmentNumber = `APT-${(count + 1).toString().padStart(6, '0')}`;
   }
-  next();
-});
+};
+
+appointmentSchema.pre('validate', assignAppointmentNumber);
+appointmentSchema.pre('save', assignAppointmentNumber);
 
 // Indexes for better query performance
 appointmentSchema.index({ patient: 1, date: 1 });

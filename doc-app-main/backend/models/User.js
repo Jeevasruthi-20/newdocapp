@@ -103,6 +103,10 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
   resetPasswordOTP: String,
   resetPasswordOTPExpires: Date,
+
+  // JWT refresh token (hashed)
+  refreshTokenHash: { type: String, select: false },
+  refreshTokenExpires: { type: Date, select: false },
   
   // Role
   role: {

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./BillingCalculator.css";
 
 // Minimal doctor list with numeric fees for calculation
@@ -14,6 +15,7 @@ const currency = (n) =>
   (isNaN(n) ? 0 : n).toLocaleString(undefined, { style: "currency", currency: "USD" });
 
 const BillingCalculator = () => {
+  const { t } = useTranslation();
   const [doctorId, setDoctorId] = useState(1);
   const [sessions, setSessions] = useState(1);
   const [extraItems, setExtraItems] = useState([
@@ -47,6 +49,17 @@ const BillingCalculator = () => {
 
   const due = useMemo(() => Math.max(total - (Number(paidAmount) || 0), 0), [total, paidAmount]);
 
+  const getSpecialtyLabel = (spec) => {
+    switch (spec) {
+      case "General Physician": return t('specialty.general');
+      case "Gynecologist": return t('specialty.gynecologist');
+      case "Dermatologist": return t('specialty.dermatologist');
+      case "Cardiologist": return t('specialty.cardiologist');
+      case "Pediatrician": return t('specialty.pediatrician');
+      default: return spec;
+    }
+  };
+
   const addItem = () => {
     setExtraItems((prev) => [
       ...prev,
@@ -74,13 +87,13 @@ const BillingCalculator = () => {
   return (
     <div className="billing-page">
       <div className="container">
-        <h1 className="section-title">Billing Calculator</h1>
+        <h1 className="section-title">{t('billing.title')}</h1>
 
         <div className="billing-grid">
           <div className="card">
-            <h2 className="section-heading">Appointment</h2>
+            <h2 className="section-heading">{t('billing.appointment')}</h2>
             <div className="form-group">
-              <label className="form-label">Doctor</label>
+              <label className="form-label">{t('billing.doctor')}</label>
               <select
                 className="form-input"
                 value={doctorId}
@@ -88,13 +101,13 @@ const BillingCalculator = () => {
               >
                 {DOCTORS.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} — {d.specialty} ({currency(d.fee)}/session)
+                    {d.name} — {getSpecialtyLabel(d.specialty)} ({currency(d.fee)}/{t('common.share') === 'பகிர்' ? 'சந்திப்பு' : 'session'})
                   </option>
                 ))}
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Number of Sessions</label>
+              <label className="form-label">{t('billing.sessions')}</label>
               <input
                 type="number"
                 min={1}
@@ -104,22 +117,22 @@ const BillingCalculator = () => {
               />
             </div>
             <div className="summary-line">
-              <span>Consultation Subtotal</span>
+              <span>{t('billing.consultSubtotal')}</span>
               <strong>{currency(consultSubtotal)}</strong>
             </div>
           </div>
 
           <div className="card">
-            <h2 className="section-heading">Extras</h2>
+            <h2 className="section-heading">{t('billing.extras')}</h2>
             <div className="extras">
               {extraItems.length === 0 && (
-                <p className="muted">No extra items yet.</p>
+                <p className="muted">{t('billing.noExtras')}</p>
               )}
               {extraItems.map((item) => (
                 <div key={item.id} className="extra-row">
                   <input
                     className="form-input"
-                    placeholder="Item (e.g., Lab Tests)"
+                    placeholder={t('billing.itemPlaceholder')}
                     value={item.label}
                     onChange={(e) => updateItem(item.id, { label: e.target.value })}
                   />
@@ -128,26 +141,26 @@ const BillingCalculator = () => {
                     type="number"
                     min={0}
                     step="0.01"
-                    placeholder="Amount"
+                    placeholder={t('billing.amountPlaceholder')}
                     value={item.amount}
                     onChange={(e) => updateItem(item.id, { amount: Number(e.target.value) })}
                   />
-                  <button className="btn secondary-btn small" onClick={() => removeItem(item.id)}>Remove</button>
+                  <button className="btn secondary-btn small" onClick={() => removeItem(item.id)}>{t('billing.remove')}</button>
                 </div>
               ))}
-              <button className="btn primary-btn" onClick={addItem}>Add Item</button>
+              <button className="btn primary-btn" onClick={addItem}>{t('billing.addItem')}</button>
               <div className="summary-line">
-                <span>Extras Subtotal</span>
+                <span>{t('billing.extrasSubtotal')}</span>
                 <strong>{currency(itemsSubtotal)}</strong>
               </div>
             </div>
           </div>
 
           <div className="card">
-            <h2 className="section-heading">Summary</h2>
+            <h2 className="section-heading">{t('billing.summary')}</h2>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Discount (%)</label>
+                <label className="form-label">{t('billing.discount')}</label>
                 <input
                   type="number"
                   min={0}
@@ -158,7 +171,7 @@ const BillingCalculator = () => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Tax (%)</label>
+                <label className="form-label">{t('billing.tax')}</label>
                 <input
                   type="number"
                   min={0}
@@ -170,14 +183,14 @@ const BillingCalculator = () => {
             </div>
 
             <div className="calc-lines">
-              <div className="summary-line"><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
-              <div className="summary-line"><span>Discount</span><strong>- {currency(discountAmount)}</strong></div>
-              <div className="summary-line"><span>Tax</span><strong>{currency(taxAmount)}</strong></div>
-              <div className="summary-line total"><span>Total Payable</span><strong>{currency(total)}</strong></div>
+              <div className="summary-line"><span>{t('billing.subtotal')}</span><strong>{currency(subtotal)}</strong></div>
+              <div className="summary-line"><span>{t('billing.discount') === 'தள்ளுபடி (%)' ? 'தள்ளுபடி' : 'Discount'}</span><strong>- {currency(discountAmount)}</strong></div>
+              <div className="summary-line"><span>{t('billing.tax') === 'வரி (%)' ? 'வரி' : 'Tax'}</span><strong>{currency(taxAmount)}</strong></div>
+              <div className="summary-line total"><span>{t('billing.totalPayable')}</span><strong>{currency(total)}</strong></div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Amount Paid</label>
+              <label className="form-label">{t('billing.paidAmount')}</label>
               <input
                 type="number"
                 min={0}
@@ -187,11 +200,11 @@ const BillingCalculator = () => {
                 onChange={(e) => setPaidAmount(Number(e.target.value))}
               />
             </div>
-            <div className="summary-line due"><span>Amount Due</span><strong>{currency(due)}</strong></div>
+            <div className="summary-line due"><span>{t('billing.dueAmount')}</span><strong>{currency(due)}</strong></div>
 
             <div className="actions">
-              <button className="btn secondary-btn" onClick={resetAll}>Reset</button>
-              <a className="btn primary-btn" href="#" onClick={(e)=>e.preventDefault()}>Proceed to Payment</a>
+              <button className="btn secondary-btn" onClick={resetAll}>{t('billing.reset')}</button>
+              <a className="btn primary-btn" href="#" onClick={(e)=>e.preventDefault()}>{t('billing.proceedPayment')}</a>
             </div>
           </div>
         </div>

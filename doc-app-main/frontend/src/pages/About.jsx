@@ -1,202 +1,199 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import './About.css';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import {
+  FiHeart, FiShield, FiUsers, FiClock, FiAward, FiCheckCircle,
+} from 'react-icons/fi';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+
+const fadeUp = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.5 },
+};
+
+const TEAM = [
+  { name: 'Dr. Priya Sharma', role: 'Chief Medical Officer', spec: 'Cardiology', img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop' },
+  { name: 'Dr. Rajesh Kumar', role: 'Head of Telemedicine', spec: 'Internal Medicine', img: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop' },
+  { name: 'Dr. Meera Iyer', role: 'Women\'s Health Lead', spec: 'Gynecology', img: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=200&h=200&fit=crop' },
+  { name: 'Dr. Karthik Menon', role: 'Pediatrics Director', spec: 'Pediatrics', img: 'https://images.unsplash.com/photo-1622253692010-333f45794416?w=200&h=200&fit=crop' },
+];
 
 const About = () => {
+  const { t } = useTranslation();
+
+  const STATS = [
+    { value: '50K+', label: t('about.patientsServed') },
+    { value: '200+', label: t('about.expertDoctors') },
+    { value: '24/7', label: t('about.careAvailable') },
+    { value: '98%', label: t('about.satisfactionRate') },
+  ];
+
+  const TIMELINE = [
+    { year: '2019', title: t('about.timeline.2019'), desc: t('about.timeline.2019Desc') },
+    { year: '2021', title: t('about.timeline.2021'), desc: t('about.timeline.2021Desc') },
+    { year: '2023', title: t('about.timeline.2023'), desc: t('about.timeline.2023Desc') },
+    { year: '2025', title: t('about.timeline.2025'), desc: t('about.timeline.2025Desc') },
+  ];
+
+  const WHY = [
+    { icon: FiShield, title: t('about.why.t1'), desc: t('about.why.d1') },
+    { icon: FiClock, title: t('about.why.t2'), desc: t('about.why.d2') },
+    { icon: FiUsers, title: t('about.why.t3'), desc: t('about.why.d3') },
+    { icon: FiAward, title: t('about.why.t4'), desc: t('about.why.d4') },
+  ];
+
+  const TESTIMONIALS = [
+    { quote: t('about.patientStories.q1'), name: 'Anitha R.', location: 'Chennai' },
+    { quote: t('about.patientStories.q2'), name: 'Mohammed K.', location: 'Hyderabad' },
+    { quote: t('about.patientStories.q3'), name: 'Lakshmi P.', location: 'Coimbatore' },
+  ];
+
   return (
-    <div className="about-page-premium">
-      
-      {/* 1. Hero Section */}
-      <section className="about-hero">
-        <div className="hero-background-shapes">
-          <div className="shape shape-1"></div>
-          <div className="shape shape-2"></div>
+    <div className="min-h-screen bg-gradient-to-b from-medical-50 via-white to-medical-50">
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-medical-gradient text-white py-20 sm:py-28">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-medical-300 rounded-full blur-3xl" />
         </div>
-        
-        <div className="container about-hero-container">
-          <div className="about-hero-content fade-in-up">
-            <span className="hero-badge">ABOUT US</span>
-            <h1 className="hero-heading">Healthcare, Reimagined for Everyone</h1>
-            <p className="hero-description">
-              We are on a mission to make premium healthcare accessible, affordable, and seamless. 
-              Experience a modern platform designed to connect you with trusted professionals instantly.
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 text-center">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
+            <span className="inline-block px-4 py-1 rounded-full bg-white/20 text-sm font-medium mb-6">About MedConnect</span>
+            <h1 className="text-3xl sm:text-5xl font-bold mb-4 leading-tight">{t('about.heroTitle')}</h1>
+            <p className="text-lg text-medical-100 max-w-2xl mx-auto mb-8">{t('about.heroSubtitle')}</p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link to="/signup"><Button className="!bg-white !text-medical-600">{t('about.getStarted')}</Button></Link>
+              <Link to="/doctors"><Button variant="secondary" className="!border-white/50 !text-white hover:!bg-white/10">{t('about.findDoctor')}</Button></Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Animated stats */}
+      <section className="max-w-6xl mx-auto px-4 -mt-12 relative z-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {STATS.map((s, i) => (
+            <motion.div key={s.label} {...fadeUp} transition={{ delay: i * 0.1 }}>
+              <Card className="text-center !p-6">
+                <motion.p
+                  className="text-3xl font-bold text-medical-600"
+                  initial={{ scale: 0.5 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                >
+                  {s.value}
+                </motion.p>
+                <p className="text-sm text-slate-500 mt-1">{s.label}</p>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Mission & Vision */}
+      <section className="max-w-6xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-6">
+        <motion.div {...fadeUp}>
+          <Card className="h-full border-l-4 border-l-medical-500">
+            <FiHeart className="text-3xl text-medical-500 mb-4" />
+            <h2 className="text-xl font-bold text-slate-800 mb-3">{t('about.mission')}</h2>
+            <p className="text-slate-600 leading-relaxed">
+              {t('about.missionText')}
             </p>
-          </div>
-          
-          <div className="hero-stats-grid fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <div className="stat-card">
-              <h3>15K+</h3>
-              <p>Patients Served</p>
-            </div>
-            <div className="stat-card">
-              <h3>500+</h3>
-              <p>Verified Doctors</p>
-            </div>
-            <div className="stat-card">
-              <h3>30+</h3>
-              <p>Specialties</p>
-            </div>
-            <div className="stat-card">
-              <h3>4.9★</h3>
-              <p>Avg Rating</p>
-            </div>
+          </Card>
+        </motion.div>
+        <motion.div {...fadeUp}>
+          <Card className="h-full border-l-4 border-l-sky-400">
+            <FiCheckCircle className="text-3xl text-sky-500 mb-4" />
+            <h2 className="text-xl font-bold text-slate-800 mb-3">{t('about.vision')}</h2>
+            <p className="text-slate-600 leading-relaxed">
+              {t('about.visionText')}
+            </p>
+          </Card>
+        </motion.div>
+      </section>
+
+      {/* Why choose */}
+      <section className="bg-white py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <motion.h2 {...fadeUp} className="text-2xl font-bold text-center text-slate-800 mb-10">{t('about.whyChoose')}</motion.h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {WHY.map((item, i) => (
+              <motion.div key={item.title} {...fadeUp} transition={{ delay: i * 0.08 }}>
+                <Card className="text-center h-full">
+                  <item.icon className="text-3xl text-medical-500 mx-auto mb-3" />
+                  <h3 className="font-bold text-slate-800 mb-2">{item.title}</h3>
+                  <p className="text-sm text-slate-500">{item.desc}</p>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 2. Mission & Vision Section */}
-      <section className="mission-vision-section">
-        <div className="container">
-          <div className="mv-grid">
-            <div className="mv-card">
-              <div className="mv-icon-wrapper">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-              </div>
-              <h2>Our Mission</h2>
-              <p>
-                To break down barriers in the healthcare system by providing a transparent, 
-                user-centric platform where finding the right doctor is as easy as booking a flight.
-              </p>
-            </div>
-            
-            <div className="mv-card">
-              <div className="mv-icon-wrapper">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h4l3-9 5 18 3-9h5"></path></svg>
-              </div>
-              <h2>Our Vision</h2>
-              <p>
-                A future where everyone, regardless of location, has instant access to 
-                top-tier medical professionals, comprehensive health records, and continuous care.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Core Values Section */}
-      <section className="core-values-section">
-        <div className="container">
-          <div className="section-header text-center">
-            <h2 className="section-title-premium">Our Core Values</h2>
-            <p className="section-subtitle">The principles that guide every decision we make.</p>
-          </div>
-          
-          <div className="values-grid">
-            <div className="value-card">
-              <div className="value-icon icon-trust">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-              </div>
-              <h3>Trust & Transparency</h3>
-              <p>Honest reviews, verified credentials, and clear pricing with zero hidden fees.</p>
-            </div>
-            
-            <div className="value-card">
-              <div className="value-icon icon-access">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
-              </div>
-              <h3>Accessibility</h3>
-              <p>Healthcare that is available 24/7, right from your phone, tablet, or computer.</p>
-            </div>
-
-            <div className="value-card">
-              <div className="value-icon icon-innovation">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-              </div>
-              <h3>Innovation</h3>
-              <p>Leveraging cutting-edge technology to streamline appointments and health tracking.</p>
-            </div>
-
-            <div className="value-card">
-              <div className="value-icon icon-compassion">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              </div>
-              <h3>Compassion</h3>
-              <p>Treating every patient with the empathy, respect, and dignity they truly deserve.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Why Choose Us Section */}
-      <section className="why-choose-us-section">
-        <div className="container">
-          <div className="wcu-content">
-            <div className="wcu-text">
-              <h2 className="section-title-premium">Why Choose MedConnect?</h2>
-              <p className="wcu-description">
-                We've built a platform that puts patients first. From finding a specialist 
-                to managing your prescriptions, everything is handled in one secure place.
-              </p>
-              
-              <ul className="wcu-features-list">
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Top-rated specialists
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Reliable health records
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  In-person & video consultation
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Instant online booking
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Secure and private platform
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Smart reminders
-                </li>
-              </ul>
-            </div>
-            
-            <div className="wcu-image">
-              {/* Optional placeholder for an image if needed, or simply decorative */}
-              <div className="decorative-phone-mockup">
-                <div className="mockup-header">
-                  <div className="mockup-notch"></div>
+      {/* Team */}
+      <section className="max-w-6xl mx-auto px-4 py-16">
+        <motion.h2 {...fadeUp} className="text-2xl font-bold text-center text-slate-800 mb-10">{t('about.team')}</motion.h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {TEAM.map((doc, i) => (
+            <motion.div key={doc.name} {...fadeUp} transition={{ delay: i * 0.1 }}>
+              <Card className="text-center overflow-hidden !p-0">
+                <img src={doc.img} alt={doc.name} className="w-full h-48 object-cover" />
+                <div className="p-4">
+                  <h3 className="font-bold text-slate-800">{doc.name}</h3>
+                  <p className="text-sm text-medical-600">{doc.role}</p>
+                  <p className="text-xs text-slate-400 mt-1">{doc.spec}</p>
                 </div>
-                <div className="mockup-body">
-                  <div className="mockup-card"></div>
-                  <div className="mockup-card"></div>
-                  <div className="mockup-card"></div>
-                </div>
-              </div>
-            </div>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Timeline */}
+      <section className="bg-medical-50 py-16">
+        <div className="max-w-3xl mx-auto px-4">
+          <motion.h2 {...fadeUp} className="text-2xl font-bold text-center text-slate-800 mb-10">{t('about.history')}</motion.h2>
+          <div className="relative border-l-2 border-medical-200 ml-4 space-y-8">
+            {TIMELINE.map((item, i) => (
+              <motion.div key={item.year} {...fadeUp} transition={{ delay: i * 0.1 }} className="relative pl-8">
+                <div className="absolute -left-[9px] w-4 h-4 rounded-full bg-medical-500 border-4 border-white shadow-medical" />
+                <span className="text-sm font-bold text-medical-600">{item.year}</span>
+                <h3 className="font-bold text-slate-800">{item.title}</h3>
+                <p className="text-sm text-slate-500 mt-1">{item.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 5. Team Section */}
-      <section className="team-section">
-        <div className="container">
-          <div className="team-card">
-            <div className="team-card-content">
-              <h2>Meet Our Team</h2>
-              <p>
-                Behind MedConnect is a passionate group of healthcare professionals, 
-                engineers, and designers dedicated to revolutionizing the way you experience healthcare.
-              </p>
-              
-              <div className="team-avatars">
-                <div className="avatar-circle"><img src="https://ui-avatars.com/api/?name=Sarah+J&background=0D8ABC&color=fff" alt="Team Member" /></div>
-                <div className="avatar-circle"><img src="https://ui-avatars.com/api/?name=Michael+T&background=22C55E&color=fff" alt="Team Member" /></div>
-                <div className="avatar-circle"><img src="https://ui-avatars.com/api/?name=Emma+W&background=F59E0B&color=fff" alt="Team Member" /></div>
-                <div className="avatar-circle"><img src="https://ui-avatars.com/api/?name=David+L&background=EC4899&color=fff" alt="Team Member" /></div>
-              </div>
-              
-              <Link to="/contact" className="btn primary-btn team-btn">Learn more about us</Link>
-            </div>
-          </div>
+      {/* Testimonials */}
+      <section className="max-w-6xl mx-auto px-4 py-16">
+        <motion.h2 {...fadeUp} className="text-2xl font-bold text-center text-slate-800 mb-10">{t('about.testimonials')}</motion.h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          {TESTIMONIALS.map((t_, i) => (
+            <motion.div key={t_.name} {...fadeUp} transition={{ delay: i * 0.1 }}>
+              <Card className="h-full">
+                <p className="text-slate-600 italic mb-4">&ldquo;{t_.quote}&rdquo;</p>
+                <p className="font-semibold text-slate-800">{t_.name}</p>
+                <p className="text-xs text-slate-400">{t_.location}</p>
+              </Card>
+            </motion.div>
+          ))}
         </div>
       </section>
-      
+
+      {/* CTA */}
+      <section className="max-w-4xl mx-auto px-4 pb-20 text-center">
+        <Card className="bg-medical-gradient !text-white !border-0">
+          <h2 className="text-2xl font-bold mb-3">{t('about.ready')}</h2>
+          <p className="text-medical-100 mb-6">{t('about.ctaText')}</p>
+          <Link to="/signup"><Button className="!bg-white !text-medical-600">{t('about.createAccount')}</Button></Link>
+        </Card>
+      </section>
     </div>
   );
 };

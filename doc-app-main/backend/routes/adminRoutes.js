@@ -3,10 +3,9 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Appointment = require('../models/Appointment');
-const { isAdmin } = require('../middleware/adminMiddleware');
+const { adminAuth } = require('../middleware/adminMiddleware');
 
-// Protect all routes with isAdmin middleware
-router.use(isAdmin);
+router.use(adminAuth);
 
 // GET all patients
 router.get('/patients', async (req, res) => {

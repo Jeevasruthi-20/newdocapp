@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { apiFetch, apiJson } from "../lib/api";
 import "./AdminDashboard.css";
 
-const API_BASE_URL = "http://localhost:5000/api/admin";
+const API_BASE_URL = "/api/admin";
 
 const StatCard = ({ title, value, icon, color }) => (
   <div className={`stat-card ${color}`}>
@@ -27,15 +28,15 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsRes, apptsRes, patientsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/stats`, { credentials: 'include' }),
-        fetch(`${API_BASE_URL}/appointments`, { credentials: 'include' }),
-        fetch(`${API_BASE_URL}/patients`, { credentials: 'include' })
+      const [statsData, apptsData, patientsData] = await Promise.all([
+        apiJson(`${API_BASE_URL}/stats`).catch(() => null),
+        apiJson(`${API_BASE_URL}/appointments`).catch(() => []),
+        apiJson(`${API_BASE_URL}/patients`).catch(() => []),
       ]);
 
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (apptsRes.ok) setAppointments(await apptsRes.json());
-      if (patientsRes.ok) setPatients(await patientsRes.json());
+      if (statsData) setStats(statsData);
+      if (apptsData) setAppointments(apptsData);
+      if (patientsData) setPatients(patientsData);
     } catch (error) {
       console.error("Dashboard fetch error:", error);
     } finally {
@@ -53,13 +54,11 @@ const AdminDashboard = () => {
 
   const handleUpdateStatus = async (id, status) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+      await apiFetch(`${API_BASE_URL}/appointments/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
-        credentials: 'include'
       });
-      if (res.ok) fetchData();
+      fetchData();
     } catch (error) {
       console.error("Status update error:", error);
     }
@@ -68,11 +67,8 @@ const AdminDashboard = () => {
   const handleDeletePatient = async (id) => {
     if (!window.confirm("Are you sure you want to delete this patient? This action cannot be undone.")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/patient/${id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      if (res.ok) fetchData();
+      await apiFetch(`${API_BASE_URL}/patient/${id}`, { method: 'DELETE' });
+      fetchData();
     } catch (error) {
       console.error("Delete error:", error);
     }

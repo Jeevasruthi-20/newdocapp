@@ -1,519 +1,222 @@
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import "./UserProfile.css";
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import { FiEdit2, FiCamera } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import { calcProfileCompletion, formatAddress } from '../lib/utils';
+import { getImageUrl } from '../lib/api';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
-const ProfileStat = ({ label, value }) => (
-  <div className="profile-stat">
-    <span className="stat-label">{label}</span>
-    <span className="stat-value">{value || "—"}</span>
-  </div>
-);
-
-const InfoItem = ({ icon, label, value, isEditable = false, onEdit, fieldName }) => (
-  <div className="info-item">
-    <div className="info-content-wrapper">
-      <span className="info-label">{label}</span>
-      <span className={`info-value ${!value ? 'empty' : ''}`}>{value || "Not provided"}</span>
-    </div>
-    {isEditable && (
-      <button 
-        className="edit-btn" 
-        onClick={() => onEdit(fieldName, value)}
-        aria-label={`Edit ${label}`}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>
-    )}
-  </div>
-);
-
-const Avatar = ({ name, photoUrl, onPhotoChange }) => {
-  const handlePhotoClick = () => {
-    if (onPhotoChange) {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          onPhotoChange(file);
-        }
-      };
-      input.click();
-    }
-  };
-
-  if (photoUrl) {
-    return (
-      <div className="profile-avatar-section">
-        <div className="profile-avatar">
-          <img src={photoUrl} alt={name} />
-        </div>
-        <button className="edit-avatar-btn" onClick={handlePhotoClick} aria-label="Change photo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-        </button>
-      </div>
-    );
-  }
-  
-  const initials = name
-    ? name
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "U";
-    
-  return (
-    <div className="profile-avatar-section">
-      <div className="profile-avatar initials">{initials}</div>
-      <button className="edit-avatar-btn" onClick={handlePhotoClick} aria-label="Upload photo">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-          <circle cx="12" cy="13" r="4"/>
-        </svg>
-      </button>
-    </div>
-  );
+const FIELD_MAP = {
+  name: 'name',
+  phone: 'phone',
+  dob: 'dob',
+  gender: 'gender',
+  bloodGroup: 'bloodGroup',
+  address: 'address',
+  height: 'heightCm',
+  weight: 'weightKg',
+  allergies: 'allergies',
+  emergencyContactName: 'emergencyContactName',
+  emergencyContactPhone: 'emergencyContactPhone',
+  emergencyContactRelation: 'emergencyContactRelation',
 };
-
-const EditModal = ({ isOpen, onClose, field, currentValue, onSave }) => {
-  const [value, setValue] = useState(currentValue || '');
-  const [loading, setLoading] = useState(false);
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append(field, value);
-
-      const res = await fetch("http://localhost:5000/api/user/profile", {
-        method: "PUT",
-        credentials: 'include',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      
-      await onSave(field, value);
-      onClose();
-    } catch (error) {
-      console.error('Save failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  const getFieldConfig = (field) => {
-    switch (field) {
-      case 'displayName':
-        return { label: 'Full Name', type: 'text', placeholder: 'Enter your full name' };
-      case 'phoneNumber':
-        return { label: 'Phone Number', type: 'tel', placeholder: '+1 (555) 123-4567' };
-      case 'dob':
-        return { label: 'Date of Birth', type: 'date', placeholder: '' };
-      case 'address':
-        return { label: 'Address', type: 'text', placeholder: 'Enter your address' };
-      case 'bloodGroup':
-        return { label: 'Blood Group', type: 'select', options: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] };
-      case 'allergies':
-        return { label: 'Allergies', type: 'text', placeholder: 'Enter any allergies or "None"' };
-      case 'heightCm':
-        return { label: 'Height (cm)', type: 'number', placeholder: '170' };
-      case 'weightKg':
-        return { label: 'Weight (kg)', type: 'number', placeholder: '70' };
-      case 'emergencyContactName':
-        return { label: 'Emergency Contact Name', type: 'text', placeholder: 'Enter emergency contact name' };
-      case 'emergencyContactPhone':
-        return { label: 'Emergency Contact Phone', type: 'tel', placeholder: '+1 (555) 123-4567' };
-      case 'emergencyContactRelation':
-        return { label: 'Emergency Contact Relation', type: 'text', placeholder: 'e.g., Spouse, Parent, Sibling' };
-      default:
-        return { label: field, type: 'text', placeholder: 'Enter value' };
-    }
-  };
-
-  const config = getFieldConfig(field);
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Edit {config.label}</h3>
-          <button className="close-btn" onClick={onClose}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        
-        <div className="modal-body">
-          {config.type === 'select' ? (
-            <select 
-              value={value} 
-              onChange={(e) => setValue(e.target.value)}
-              className="form-input"
-            >
-              <option value="">Select {config.label}</option>
-              {config.options.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type={config.type}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={config.placeholder}
-              className="form-input"
-            />
-          )}
-        </div>
-        
-        <div className="modal-footer">
-          <button className="btn secondary-btn" onClick={onClose}>Cancel</button>
-          <button 
-            className="btn primary-btn" 
-            onClick={handleSave}
-            disabled={loading || !value.trim()}
-          >
-            {loading ? <span className="loading"></span> : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const API_BASE_URL = "http://localhost:5000/api";
 
 const UserProfile = () => {
-  const { currentUser, setCurrentUser, userProfile, updateUserProfile, getDisplayName, getPhotoURL, getCreationTime } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editModal, setEditModal] = useState({ isOpen: false, field: '', currentValue: '' });
-  const [loading, setLoading] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const { t } = useTranslation();
+  const { currentUser, updateUserProfile, getDisplayName } = useAuth();
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
 
-  const [extendedProfile, setExtendedProfile] = useState({
-    dob: "",
-    address: "",
-    bloodGroup: "",
-    allergies: "None",
-    heightCm: "",
-    weightKg: "",
-    emergencyContact: {
-      name: "",
-      phone: "",
-      relation: ""
-    }
-  });
+  const completion = calcProfileCompletion(currentUser);
+  const photoUrl = getImageUrl(currentUser?.profileImage);
 
-  useEffect(() => {
-    if (currentUser) {
-      setExtendedProfile({
-        dob: currentUser.dob || "",
-        address: currentUser.address?.street || "",
-        bloodGroup: currentUser.bloodGroup || "",
-        allergies: Array.isArray(currentUser.allergies) ? currentUser.allergies.map(a => a.name).join(", ") : currentUser.allergies || "None",
-        heightCm: currentUser.height || "",
-        weightKg: currentUser.weight || "",
-        emergencyContact: {
-          name: currentUser.emergencyContact?.name || "",
-          phone: currentUser.emergencyContact?.phone || "",
-          relation: currentUser.emergencyContact?.relationship || ""
-        }
+  const openEdit = (field, value) => {
+    setEditing(field);
+    if (field === 'address') {
+      setForm({ [field]: formatAddress(currentUser?.address) });
+    } else if (field === 'allergies') {
+      setForm({ [field]: (currentUser?.allergies || []).map((a) => a.name).join(', ') });
+    } else if (field === 'emergencyContactName') {
+      setForm({
+        emergencyContactName: currentUser?.emergencyContact?.name || '',
+        emergencyContactPhone: currentUser?.emergencyContact?.phone || '',
+        emergencyContactRelation: currentUser?.emergencyContact?.relationship || '',
       });
+      setEditing('emergency');
+    } else {
+      setForm({ [field]: value ?? '' });
     }
-  }, [currentUser]);
-
-  const completedFields = [
-    currentUser?.name,
-    currentUser?.phone,
-    extendedProfile.dob,
-    extendedProfile.address,
-    extendedProfile.bloodGroup,
-    extendedProfile.allergies,
-    extendedProfile.heightCm,
-    extendedProfile.weightKg,
-    extendedProfile.emergencyContact.name,
-    extendedProfile.emergencyContact.phone,
-    extendedProfile.emergencyContact.relation
-  ].filter(Boolean).length;
-
-  const profileCompletion = Math.round((completedFields / 11) * 100);
-
-  const handleEdit = (field, currentValue) => {
-    setEditModal({ isOpen: true, field, currentValue });
   };
 
-  const handleSave = async (field, value) => {
-    setLoading(true);
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      // Create updates object for API
-      const updates = {};
-      
-      // Map frontend field names to backend expectations if necessary
-      if (field === 'displayName') updates.name = value;
-      else if (field === 'emergencyContactName') updates.emergencyContactName = value;
-      else if (field === 'emergencyContactPhone') updates.emergencyContactPhone = value;
-      else if (field === 'emergencyContactRelation') updates.emergencyContactRelation = value;
-      else updates[field] = value;
-
-      const res = await fetch("http://localhost:5000/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: 'include',
-        body: JSON.stringify(updates),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Update failed");
+      if (editing === 'emergency') {
+        await updateUserProfile({
+          emergencyContactName: form.emergencyContactName,
+          emergencyContactPhone: form.emergencyContactPhone,
+          emergencyContactRelation: form.emergencyContactRelation,
+        });
+      } else {
+        const key = FIELD_MAP[editing] || editing;
+        await updateUserProfile({ [key]: form[editing] ?? form[key] ?? '' });
       }
-
-      const updatedUser = await res.json();
-      setCurrentUser(updatedUser.user || updatedUser); // Update AuthContext with full object from backend
-    } catch (error) {
-      console.error('Profile update failed:', error);
-      throw error;
+      toast.success(t('profile.updateSuccess'));
+      setEditing(null);
+    } catch (err) {
+      toast.error(err.message || 'Update failed');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handlePhotoChange = async (file) => {
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-
     try {
-      const formData = new FormData();
-      formData.append('profileImage', file);
-
-      const res = await fetch("http://localhost:5000/api/user/profile", {
-        method: "PUT",
-        credentials: 'include',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      updateUserProfile(data.user);
-    } catch (error) {
-      console.error('Photo update failed:', error);
+      await updateUserProfile({}, file);
+      toast.success(t('profile.photoUpdated'));
+    } catch {
+      toast.error(t('profile.photoFailed'));
     }
   };
 
-  if (!currentUser) {
-    return (
-      <div className="profile-page">
-        <div className="container">
-          <div className="card">
-            <p>Please log in to view your profile.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const displayValue = (value) => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'object') return formatAddress(value) || '—';
+    return String(value);
+  };
 
-  const user = {
-    name: getDisplayName(),
-    email: currentUser.email,
-    phone: currentUser.phoneNumber || extendedProfile.phoneNumber || "",
-    photoUrl: photoPreview || currentUser.profileImage ? `http://localhost:5000${currentUser.profileImage}` : getPhotoURL(),
-    address: extendedProfile.address,
-    bloodGroup: extendedProfile.bloodGroup,
-    allergies: extendedProfile.allergies,
-    heightCm: extendedProfile.heightCm,
-    weightKg: extendedProfile.weightKg,
-    emergencyContact: extendedProfile.emergencyContact,
-    signupDate: getCreationTime()
+  const InfoRow = ({ label, value, field }) => (
+    <div className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
+      <div>
+        <p className="text-xs text-slate-400 uppercase tracking-wide">{label}</p>
+        <p className="font-medium text-slate-800 mt-0.5">{displayValue(value)}</p>
+      </div>
+      {field && (
+        <button type="button" onClick={() => openEdit(field, value)} className="p-2 text-medical-600 hover:bg-medical-50 rounded-lg">
+          <FiEdit2 size={16} />
+        </button>
+      )}
+    </div>
+  );
+
+  const initials = getDisplayName().split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+
+  const getEditingTitle = () => {
+    if (editing === 'emergency') return t('profile.editEmergency');
+    return `${t('common.edit')} ${t(`profile.${editing}`)}`;
   };
 
   return (
-    <div className="profile-page">
-      <div className="profile-container">
-        <div className="profile-header card">
-          <div className="profile-identity">
-            <Avatar 
-              name={user.name} 
-              photoUrl={user.photoUrl} 
-              onPhotoChange={handlePhotoChange}
-            />
-            <div>
-              <h1 className="profile-name">{user.name}</h1>
-              <div className="profile-badges">
-                <span className="role-badge">Patient</span>
+    <div className="min-h-screen bg-gradient-to-b from-medical-50 to-white py-10">
+      <div className="max-w-3xl mx-auto px-4">
+        <Card className="mb-6 overflow-hidden">
+          <div className="bg-medical-gradient h-24" />
+          <div className="px-6 pb-6 -mt-12 relative">
+            <div className="relative inline-block">
+              {photoUrl ? (
+                <img src={photoUrl} alt="" className="w-24 h-24 rounded-full border-4 border-white object-cover shadow-medical" />
+              ) : (
+                <div className="w-24 h-24 rounded-full border-4 border-white bg-medical-100 flex items-center justify-center text-2xl font-bold text-medical-600 shadow-medical">
+                  {initials}
+                </div>
+              )}
+              <label className="absolute bottom-0 right-0 w-8 h-8 bg-medical-600 rounded-full flex items-center justify-center text-white cursor-pointer shadow">
+                <FiCamera size={14} />
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+              </label>
+            </div>
+            <h1 className="text-xl font-bold text-slate-800 mt-3">{getDisplayName()}</h1>
+            <p className="text-sm text-slate-500">{currentUser?.email}</p>
+            <span className="inline-block mt-2 px-3 py-0.5 rounded-full bg-medical-50 text-medical-600 text-xs font-semibold capitalize">{currentUser?.role || 'patient'}</span>
+
+            <div className="mt-4">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-slate-500">{t('dashboard.profileCompletion')}</span>
+                <span className="font-bold text-medical-600">{completion}%</span>
+              </div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${completion}%` }} className="h-full bg-medical-gradient rounded-full" />
               </div>
             </div>
           </div>
+        </Card>
+
+        <div className="grid gap-6">
+          <Card>
+            <h2 className="font-bold text-slate-800 mb-2">{t('profile.personalInfo')}</h2>
+            <InfoRow label={t('profile.fullName')} value={currentUser?.name} field="name" />
+            <InfoRow label={t('profile.phone')} value={currentUser?.phone} field="phone" />
+            <InfoRow label={t('profile.dob')} value={currentUser?.dob ? new Date(currentUser.dob).toLocaleDateString() : ''} field="dob" />
+            <InfoRow label={t('profile.gender')} value={currentUser?.gender} field="gender" />
+            <InfoRow label={t('profile.address')} value={formatAddress(currentUser?.address)} field="address" />
+          </Card>
+
+          <Card>
+            <h2 className="font-bold text-slate-800 mb-2">{t('profile.medicalInfo')}</h2>
+            <InfoRow label={t('profile.bloodGroup')} value={currentUser?.bloodGroup} field="bloodGroup" />
+            <InfoRow label={t('profile.allergies')} value={(currentUser?.allergies || []).map((a) => a.name).join(', ')} field="allergies" />
+            <InfoRow label={t('profile.height')} value={currentUser?.height ? `${currentUser.height} cm` : ''} field="height" />
+            <InfoRow label={t('profile.weight')} value={currentUser?.weight ? `${currentUser.weight} kg` : ''} field="weight" />
+          </Card>
+
+          <Card>
+            <h2 className="font-bold text-slate-800 mb-2">{t('profile.emergencyContact')}</h2>
+            <InfoRow label={t('profile.name')} value={currentUser?.emergencyContact?.name} />
+            <InfoRow label={t('profile.phone')} value={currentUser?.emergencyContact?.phone} />
+            <InfoRow label={t('profile.relationship')} value={currentUser?.emergencyContact?.relationship} />
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => openEdit('emergencyContactName')}>
+              <FiEdit2 /> {t('profile.editEmergency')}
+            </Button>
+          </Card>
         </div>
 
-        <div className="profile-summary-grid">
-          <div className="summary-card card">
-            <h3>Profile Completion</h3>
-            <div className="completion-meter">
-              <div className="completion-fill" style={{ width: `${profileCompletion}%` }} />
-              <span>{profileCompletion}% complete</span>
-            </div>
-            <p>Keep your profile updated to receive personalized care recommendations and appointment reminders.</p>
+        {/* Edit modal */}
+        {editing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setEditing(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-medical-lg shadow-medical-lg p-6 w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-bold text-slate-800 mb-4 capitalize">{getEditingTitle()}</h3>
+              {editing === 'bloodGroup' ? (
+                <select className="w-full border border-slate-200 rounded-medical px-3 py-2 mb-4" value={form.bloodGroup || ''} onChange={(e) => setForm({ bloodGroup: e.target.value })}>
+                  <option value="">{t('common.filter') === 'வடிகட்டு' ? 'தேர்ந்தெடுக்கவும்' : 'Select'}</option>
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => <option key={bg} value={bg}>{bg}</option>)}
+                </select>
+              ) : editing === 'gender' ? (
+                <select className="w-full border border-slate-200 rounded-medical px-3 py-2 mb-4" value={form.gender || ''} onChange={(e) => setForm({ gender: e.target.value })}>
+                  {['male', 'female', 'other', 'prefer-not-to-say'].map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              ) : editing === 'emergency' ? (
+                <>
+                  <input className="w-full border rounded-medical px-3 py-2 mb-2" placeholder={t('profile.name')} value={form.emergencyContactName || ''} onChange={(e) => setForm({ ...form, emergencyContactName: e.target.value })} />
+                  <input className="w-full border rounded-medical px-3 py-2 mb-2" placeholder={t('profile.phone')} value={form.emergencyContactPhone || ''} onChange={(e) => setForm({ ...form, emergencyContactPhone: e.target.value })} />
+                  <input className="w-full border rounded-medical px-3 py-2 mb-4" placeholder={t('profile.relationship')} value={form.emergencyContactRelation || ''} onChange={(e) => setForm({ ...form, emergencyContactRelation: e.target.value })} />
+                </>
+              ) : (
+                <input
+                  className="w-full border border-slate-200 rounded-medical px-3 py-2 mb-4"
+                  type={editing === 'dob' ? 'date' : editing === 'height' || editing === 'weight' ? 'number' : 'text'}
+                  value={form[editing] ?? form[FIELD_MAP[editing]] ?? ''}
+                  onChange={(e) => setForm({ [editing]: e.target.value })}
+                />
+              )}
+              <div className="flex gap-3">
+                <Button variant="secondary" className="flex-1" onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
+                <Button className="flex-1" onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
+              </div>
+            </motion.div>
           </div>
-          <div className="summary-card card">
-            <h3>Medical Snapshot</h3>
-            <p><strong>Blood Group:</strong> {extendedProfile.bloodGroup || 'Not set'}</p>
-            <p><strong>Allergies:</strong> {extendedProfile.allergies || 'Not set'}</p>
-            <p><strong>Height:</strong> {extendedProfile.heightCm ? `${extendedProfile.heightCm} cm` : 'Not set'}</p>
-          </div>
-          <div className="summary-card card">
-            <h3>Upcoming Care</h3>
-            <p><strong>Phone:</strong> {currentUser?.phoneNumber || 'Not set'}</p>
-            <p><strong>Address:</strong> {extendedProfile.address || 'Not set'}</p>
-            <p><strong>Emergency:</strong> {extendedProfile.emergencyContact.name || 'Not set'}</p>
-          </div>
-        </div>
-
-        <div className="profile-content-grid">
-          <div className="info-card card">
-            <h2 className="section-heading">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-              Contact info
-            </h2>
-            <div className="info-list">
-              <InfoItem icon="📧" label="Email" value={user.email} />
-              <InfoItem 
-                icon="📱" 
-                label="Phone" 
-                value={user.phone} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="phoneNumber"
-              />
-              <InfoItem 
-                icon="📍" 
-                label="Address" 
-                value={user.address} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="address"
-              />
-            </div>
-          </div>
-
-          <div className="info-card card">
-            <h2 className="section-heading">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-              </svg>
-              Personal details
-            </h2>
-            <div className="info-list">
-              <InfoItem 
-                icon="🎂" 
-                label="Date of Birth" 
-                value={extendedProfile.dob ? new Date(extendedProfile.dob).toLocaleDateString() : null} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="dob"
-              />
-              <InfoItem 
-                icon="🩸" 
-                label="Blood Group" 
-                value={user.bloodGroup} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="bloodGroup"
-              />
-              <InfoItem 
-                icon="⚠️" 
-                label="Allergies" 
-                value={user.allergies} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="allergies"
-              />
-              <InfoItem 
-                icon="📏" 
-                label="Height" 
-                value={user.heightCm ? `${user.heightCm} cm` : null} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="heightCm"
-              />
-              <InfoItem 
-                icon="⚖️" 
-                label="Weight" 
-                value={user.weightKg ? `${user.weightKg} kg` : null} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="weightKg"
-              />
-            </div>
-          </div>
-
-          <div className="info-card card">
-            <h2 className="section-heading">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              Emergency contact
-            </h2>
-            <div className="info-list">
-              <InfoItem 
-                icon="👤" 
-                label="Name" 
-                value={user.emergencyContact?.name} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="emergencyContactName"
-              />
-              <InfoItem 
-                icon="🤝" 
-                label="Relation" 
-                value={user.emergencyContact?.relation} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="emergencyContactRelation"
-              />
-              <InfoItem 
-                icon="📞" 
-                label="Phone" 
-                value={user.emergencyContact?.phone} 
-                isEditable={true}
-                onEdit={handleEdit}
-                fieldName="emergencyContactPhone"
-              />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
-
-      <EditModal
-        isOpen={editModal.isOpen}
-        onClose={() => setEditModal({ isOpen: false, field: '', currentValue: '' })}
-        field={editModal.field}
-        currentValue={editModal.currentValue}
-        onSave={handleSave}
-      />
     </div>
   );
 };

@@ -1,8 +1,11 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Hero from "../components/Hero";
 import "./Home.css";
 
 const Home = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="home-container">
       {/* Hero Section */}
@@ -12,16 +15,15 @@ const Home = () => {
       <section className="section intro-section">
         <div className="container">
           <div className="intro-content">
-            <h2 className="section-title fade-in-up">Welcome to MedConnect</h2>
+            <h2 className="section-title fade-in-up">{t('home.welcome')}</h2>
             <p className="intro-text fade-in-up">
-              Your trusted platform to find verified doctors and book appointments effortlessly.
-              We prioritize your health and convenience with a modern, user-friendly experience.
+              {t('home.welcomeSub')}
             </p>
             <div className="intro-features" aria-label="Key Features">
               {[
-                { icon: "🔒", label: "Secure & Private" },
-                { icon: "⚡", label: "Instant Booking" },
-                { icon: "👨‍⚕️", label: "Verified Doctors" },
+                { icon: "🔒", label: t('home.secure') },
+                { icon: "⚡", label: t('home.instant') },
+                { icon: "👨‍⚕️", label: t('home.verified') },
               ].map((feature, index) => (
                 <div key={index} className="feature-item">
                   <div className="feature-icon" aria-hidden="true">{feature.icon}</div>
@@ -36,26 +38,23 @@ const Home = () => {
       {/* How It Works Section */}
       <section className="section how-it-works">
         <div className="container">
-          <h2 className="section-title fade-in-up">How It Works</h2>
+          <h2 className="section-title fade-in-up">{t('home.howItWorks')}</h2>
           <div className="steps-container" aria-label="Steps to get started">
             {[
               {
                 number: 1,
-                title: "Sign Up & Create Profile",
-                description:
-                  "Register easily and set up your personal health profile in minutes.",
+                title: t('home.step1'),
+                description: t('home.step1Desc'),
               },
               {
                 number: 2,
-                title: "Find a Verified Doctor",
-                description:
-                  "Browse trusted medical professionals based on your needs.",
+                title: t('home.step2'),
+                description: t('home.step2Desc'),
               },
               {
                 number: 3,
-                title: "Book & Attend Appointment",
-                description:
-                  "Choose a time and attend online or in-person.",
+                title: t('home.step3'),
+                description: t('home.step3Desc'),
               },
             ].map((step) => (
               <div key={step.number} className="step fade-in-up" aria-label={`Step ${step.number}`}>
@@ -73,44 +72,38 @@ const Home = () => {
       {/* Features Section */}
       <section className="section features-section">
         <div className="container">
-          <h2 className="section-title fade-in-up">Why Choose Us?</h2>
+          <h2 className="section-title fade-in-up">{t('home.whyChooseUs')}</h2>
           <div className="features-grid" aria-label="Platform Features">
             {[
               {
                 icon: "💻",
-                title: "Easy Online Booking",
-                description:
-                  "Schedule your appointments seamlessly from anywhere.",
+                title: t('home.easyBooking'),
+                description: t('home.easyBookingDesc'),
               },
               {
                 icon: "✅",
-                title: "Verified Doctors",
-                description:
-                  "Trustworthy professionals with verified credentials.",
+                title: t('home.verified'),
+                description: t('home.verifiedDoctorsDesc'),
               },
               {
                 icon: "🕒",
-                title: "24/7 Support",
-                description:
-                  "Our team is available around the clock for assistance.",
+                title: t('home.support247'),
+                description: t('home.support247Desc'),
               },
               {
                 icon: "📱",
-                title: "Mobile Friendly",
-                description:
-                  "Access from any device, anytime, anywhere.",
+                title: t('home.mobileFriendly'),
+                description: t('home.mobileFriendlyDesc'),
               },
               {
                 icon: "🔔",
-                title: "Smart Reminders",
-                description:
-                  "Never miss an appointment with intelligent alerts.",
+                title: t('home.smartReminders'),
+                description: t('home.smartRemindersDesc'),
               },
               {
                 icon: "📊",
-                title: "Health Records",
-                description:
-                  "Securely store and manage your medical history.",
+                title: t('home.healthRecords'),
+                description: t('home.healthRecordsDesc'),
               },
             ].map((feature, index) => (
               <div key={index} className="feature-card card fade-in-up" aria-hidden="true">
@@ -126,26 +119,26 @@ const Home = () => {
       {/* Testimonials */}
       <section className="section testimonials" aria-label="User Testimonials">
         <div className="container">
-          <h2 className="section-title fade-in-up">What Our Users Say</h2>
+          <h2 className="section-title fade-in-up">{t('home.whatUsersSay')}</h2>
           <div className="testimonials-grid">
             {[
               {
-                quote: "MedConnect made booking my appointment so simple and quick. The doctors are professional and trustworthy!",
+                quote: t('home.user1Quote'),
                 avatar: "👩‍🦰",
                 name: "Sarah K.",
-                role: "Patient",
+                role: t('home.patient'),
               },
               {
-                quote: "I love the 24/7 support. Whenever I have a question, someone is always there to help me navigate the platform.",
+                quote: t('home.user2Quote'),
                 avatar: "👨‍🦱",
                 name: "James L.",
-                role: "Patient",
+                role: t('home.patient'),
               },
               {
-                quote: "The mobile app is fantastic! I can book appointments while commuting to work. It's so convenient!",
+                quote: t('home.user3Quote'),
                 avatar: "👩‍🦳",
                 name: "Maria R.",
-                role: "Patient",
+                role: t('home.patient'),
               },
             ].map((testimonial, index) => (
               <div key={index} className="testimonial-card card fade-in-up" aria-hidden="true">

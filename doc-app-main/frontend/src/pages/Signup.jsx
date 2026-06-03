@@ -1,13 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import {
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  updateProfile,
-  sendEmailVerification,
-} from "firebase/auth";
-import { auth, googleProvider, facebookProvider, appleProvider } from "../firebaseConfig";
+import { useAuth } from "../context/AuthContext";
 import "./Signup.css";
 
 const steps = [
@@ -19,6 +13,7 @@ const steps = [
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -94,66 +89,27 @@ const Signup = () => {
     const loadingToast = toast.loading("Creating your account...");
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      await updateProfile(userCredential.user, {
-        displayName: formData.name,
-      });
-
-      const extendedProfile = {
+      await signup({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
         dob: formData.dob,
-        phoneNumber: formData.phone.replace(/\s/g, ''),
+        gender: formData.gender,
+        password: formData.password,
         bloodGroup: formData.bloodGroup,
-        allergies: formData.allergies || "None",
+        allergies: formData.allergies,
         conditions: formData.conditions,
         medications: formData.medications,
-        emergencyContact: {
-          name: formData.emergencyContactName,
-          phone: formData.emergencyContactPhone,
-          relation: formData.emergencyContactRelation
-        }
-      };
-      localStorage.setItem('extendedProfile', JSON.stringify(extendedProfile));
-
-      await sendEmailVerification(userCredential.user);
-
-      // Backend submission
-      const backendRes = await fetch("http://localhost:5000/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          dob: formData.dob,
-          gender: formData.gender,
-          password: formData.password,
-          bloodGroup: formData.bloodGroup,
-          allergies: formData.allergies,
-          conditions: formData.conditions,
-          medications: formData.medications,
-          emergencyContactName: formData.emergencyContactName,
-          emergencyContactPhone: formData.emergencyContactPhone,
-          emergencyContactRelation: formData.emergencyContactRelation
-        }),
+        emergencyContactName: formData.emergencyContactName,
+        emergencyContactPhone: formData.emergencyContactPhone,
+        emergencyContactRelation: formData.emergencyContactRelation,
       });
 
-      if (!backendRes.ok) {
-        const errorData = await backendRes.json();
-        throw new Error(errorData.message || "Backend registration failed");
-      }
-
-      toast.success("Account created successfully! Please check your email.", { id: loadingToast });
-      setTimeout(() => navigate("/login"), 3000);
+      toast.success("Account created successfully!", { id: loadingToast });
+      navigate("/dashboard");
     } catch (error) {
       console.error(error);
-      let errorMessage = "Signup failed";
-      if (error.code === 'auth/email-already-in-use') errorMessage = "Email already in use";
-      toast.error(errorMessage, { id: loadingToast });
+      toast.error(error.message || "Signup failed", { id: loadingToast });
     } finally {
       setLoading(false);
     }

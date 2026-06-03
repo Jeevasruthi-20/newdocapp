@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  signInWithEmailAndPassword,
   signInWithPopup,
   signInWithPhoneNumber,
   RecaptchaVerifier,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  OAuthProvider,
   sendPasswordResetEmail,
-  signOut,
 } from "firebase/auth";
 import { auth, googleProvider } from "../firebaseConfig";
 import { useAuth } from "../context/AuthContext";
@@ -17,11 +12,12 @@ import "./Login.css";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { setCurrentUser } = useAuth();
+  const location = useLocation();
+  const { login } = useAuth();
+  const redirectTo = location.state?.from || '/dashboard';
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [showOptions, setShowOptions] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("email");
@@ -89,31 +85,12 @@ const Login = () => {
     setSuccess("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
+      const user = await login(formData.email, formData.password);
       setSuccess("Logged in successfully!");
-      setCurrentUser(data.user);
-      
-      // Redirect based on role
-      if (data.user.role === 'admin') {
+      if (user.role === 'admin') {
         navigate("/admin");
       } else {
-        navigate("/");
+        navigate(redirectTo);
       }
     } catch (err) {
       setError(err.message);

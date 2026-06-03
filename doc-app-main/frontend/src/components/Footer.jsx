@@ -1,20 +1,21 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "./Footer.css";
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <footer className="footer">
       <div className="container">
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">
-              
               <span className="logo-text">🏥MedConnect</span>
             </div>
             <p className="footer-description">
-              Your trusted platform for connecting with healthcare professionals. 
-              Making healthcare accessible, convenient, and reliable.
+              {t('footer.description')}
             </p>
             <div className="social-links">
               <a href="#" className="social-link" aria-label="Facebook">
@@ -29,7 +30,7 @@ const Footer = () => {
               </a>
               <a href="#" className="social-link" aria-label="LinkedIn">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.047-1.852-3.047-1.853 0-2.136 1.445-2.136 2.939v5.677H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.047-1.852-3.047-1.853 0-2.136 1.445-2.136 2.939v5.677H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0h.003z"/>
                 </svg>
               </a>
               <a href="#" className="social-link" aria-label="Instagram">
@@ -41,46 +42,46 @@ const Footer = () => {
           </div>
           
           <div className="footer-section">
-            <h3>Quick Links</h3>
+            <h3>{t('footer.quickLinks')}</h3>
             <ul className="footer-links">
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/doctors">Find Doctors</Link></li>
-              <li><Link to="/appointments">Appointments</Link></li>
-              <li><Link to="/about">About Us</Link></li>
-              <li><Link to="/contact">Contact</Link></li>
+              <li><Link to="/">{t('footer.home')}</Link></li>
+              <li><Link to="/doctors">{t('footer.findDoctors')}</Link></li>
+              <li><Link to="/appointments">{t('footer.appointments')}</Link></li>
+              <li><Link to="/about">{t('footer.aboutUs')}</Link></li>
+              <li><Link to="/contact">{t('footer.contact')}</Link></li>
             </ul>
           </div>
           
           <div className="footer-section">
-            <h3>Services</h3>
+            <h3>{t('footer.services')}</h3>
             <ul className="footer-links">
-              <li><a href="#">Online Consultations</a></li>
-              <li><a href="#">Appointment Booking</a></li>
-              <li><a href="#">Health Records</a></li>
-              <li><a href="#">Telemedicine</a></li>
-              <li><a href="#">Emergency Care</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.onlineConsultations')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.appointmentBooking')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.healthRecords')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.telemedicine')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.emergencyCare')}</a></li>
             </ul>
           </div>
           
           <div className="footer-section">
-            <h3>Support</h3>
+            <h3>{t('footer.support')}</h3>
             <ul className="footer-links">
-              <li><a href="#">Help Center</a></li>
-              <li><a href="#">FAQs</a></li>
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Terms of Service</a></li>
-              <li><a href="#">Contact Support</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.helpCenter')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.faqs')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.privacyPolicy')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.termsOfService')}</a></li>
+              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.contactSupport')}</a></li>
             </ul>
           </div>
         </div>
         
         <div className="footer-bottom">
           <div className="footer-bottom-content">
-            <p>&copy; 2024 MedConnect. All rights reserved.</p>
+            <p>&copy; 2024 MedConnect. {t('footer.rights')}</p>
             <div className="footer-bottom-links">
-              <a href="#">Privacy Policy</a>
-              <a href="#">Terms of Service</a>
-              <a href="#">Cookie Policy</a>
+              <a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.privacyPolicy')}</a>
+              <a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.termsOfService')}</a>
+              <a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.cookiePolicy')}</a>
             </div>
           </div>
         </div>
