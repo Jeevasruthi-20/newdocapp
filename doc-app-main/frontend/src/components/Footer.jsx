@@ -55,22 +55,22 @@ const Footer = () => {
           <div className="footer-section">
             <h3>{t('footer.services')}</h3>
             <ul className="footer-links">
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.onlineConsultations')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.appointmentBooking')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.healthRecords')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.telemedicine')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.emergencyCare')}</a></li>
+              <li><Link to="/doctors">{t('footer.onlineConsultations')}</Link></li>
+              <li><Link to="/appointments">{t('footer.appointmentBooking')}</Link></li>
+              <li><Link to="/profile">{t('footer.healthRecords')}</Link></li>
+              <li><Link to="/doctors">{t('footer.telemedicine')}</Link></li>
+              <li><Link to="/contact">{t('footer.emergencyCare')}</Link></li>
             </ul>
           </div>
           
           <div className="footer-section">
             <h3>{t('footer.support')}</h3>
             <ul className="footer-links">
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.helpCenter')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.faqs')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.privacyPolicy')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.termsOfService')}</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.contactSupport')}</a></li>
+              <li><Link to="/faq">{t('footer.helpCenter')}</Link></li>
+              <li><Link to="/faq">{t('footer.faqs')}</Link></li>
+              <li><Link to="/privacy">{t('footer.privacyPolicy')}</Link></li>
+              <li><Link to="/terms">{t('footer.termsOfService')}</Link></li>
+              <li><Link to="/contact">{t('footer.contactSupport')}</Link></li>
             </ul>
           </div>
         </div>
@@ -79,9 +79,9 @@ const Footer = () => {
           <div className="footer-bottom-content">
             <p>&copy; 2024 MedConnect. {t('footer.rights')}</p>
             <div className="footer-bottom-links">
-              <a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.privacyPolicy')}</a>
-              <a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.termsOfService')}</a>
-              <a href="#" onClick={(e)=>e.preventDefault()}>{t('footer.cookiePolicy')}</a>
+              <Link to="/privacy">{t('footer.privacyPolicy')}</Link>
+              <Link to="/terms">{t('footer.termsOfService')}</Link>
+              <Link to="/privacy">{t('footer.cookiePolicy')}</Link>
             </div>
           </div>
         </div>

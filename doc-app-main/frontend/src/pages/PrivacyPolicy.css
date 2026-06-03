@@ -1,0 +1,7 @@
+/* Placeholder styles for Privacy Policy page */
+.page-wrapper.privacy-policy {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+}

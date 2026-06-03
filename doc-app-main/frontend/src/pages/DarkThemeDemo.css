@@ -1,0 +1,22 @@
+/* Placeholder styles for Dark Theme Demo page */
+.demo-container {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+}
+
+.theme-toggle {
+  background: linear-gradient(135deg, #4f46e5, #6d28d9);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: linear-gradient(135deg, #4338ca, #5b21b6);
+}

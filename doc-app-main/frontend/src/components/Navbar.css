@@ -85,15 +85,15 @@
   gap: 2px;
 }
 
-.logo-text {
+.navbar .logo .logo-text {
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--accent-primary);
+  color: var(--text-primary);
   letter-spacing: -0.03em;
 }
 
-.logo-subtitle {
-  color: var(--text-muted);
+.navbar .logo .logo-subtitle {
+  color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 600;
 }

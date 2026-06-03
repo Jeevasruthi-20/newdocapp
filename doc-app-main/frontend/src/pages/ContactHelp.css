@@ -1,0 +1,36 @@
+/* Placeholder styles for Contact Help page */
+
+.ContactHelpContainer {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+}
+
+.ContactForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ContactForm input,
+.ContactForm textarea {
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.ContactForm button {
+  background: linear-gradient(135deg, #4f46e5, #6d28d9);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.ContactForm button:hover {
+  background: linear-gradient(135deg, #4338ca, #5b21b6);
+}
