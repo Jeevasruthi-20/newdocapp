@@ -1,4 +1,6 @@
 const express = require('express');
+const EmailLog = require('../models/EmailLog');
+const sendEmail = require('../utils/sendEmail');
 const mongoose = require('mongoose');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
@@ -108,6 +110,29 @@ router.post('/', async (req, res) => {
     const populated = await Appointment.findById(appointment._id)
       .populate('doctor', 'name doctorProfile');
 
+    // Send appointment confirmation email
+    const patient = await User.findById(req.user._id);
+    const doctorName = populated.doctor?.name || '';
+    const html = `
+      <h2>Appointment Confirmation</h2>
+      <p>Dear ${patient.name},</p>
+      <p>Your appointment with Dr. ${doctorName} is scheduled for <strong>${populated.date.toDateString()}</strong> at <strong>${populated.startTime}</strong>.</p>
+      <p>Appointment ID: ${populated._id}</p>
+      <p>Thank you for using MedConnect.</p>
+    `;
+    await sendEmail({
+      email: patient.email,
+      subject: 'MedConnect Appointment Confirmation',
+      message: html,
+    });
+    await EmailLog.create({
+      to: patient.email,
+      subject: 'MedConnect Appointment Confirmation',
+      html,
+      type: 'appointment_confirmation',
+      referenceId: populated._id,
+      status: 'sent',
+    });
     res.status(201).json(populated);
   } catch (error) {
     console.error('Create appointment error:', error);
