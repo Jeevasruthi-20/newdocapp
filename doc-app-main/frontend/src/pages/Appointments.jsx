@@ -149,12 +149,14 @@ const Appointments = () => {
 
     try {
       await addAppointment({
-        date: selectedDate,
-        startTime,
-        endTime: addMinutes(startTime, 30),
-        reason: visitReason.trim(),
-        appointmentType: 'consultation',
-      });
+          doctorId: selectedDoc?.id,
+          doctorName: selectedDoc?.name,
+          date: selectedDate,
+          startTime,
+          endTime: addMinutes(startTime, 30),
+          reason: visitReason.trim(),
+          appointmentType: 'consultation',
+        });
       toast.success("Appointment booked successfully!");
       resetBooking();
       setActiveTab('upcoming');

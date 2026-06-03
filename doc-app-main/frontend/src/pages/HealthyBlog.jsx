@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { FiSearch, FiBookmark, FiClock, FiTrendingUp } from 'react-icons/fi';
 import { BLOG_ARTICLES, CATEGORIES } from '../data/blogArticles';
 import Card from '../components/ui/Card';
+import BlogImage from '../components/BlogImage';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -64,7 +65,13 @@ const HealthyBlog = () => {
                 <Link to={`/blog/${article.slug}`}>
                   <Card className="!p-0 overflow-hidden group h-full">
                     <div className="relative h-48 overflow-hidden">
-                      <img src={article.coverImage} alt={t(`blog.articles.${article.id}.title`, article.title)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <BlogImage
+                        src={article.coverImage}
+                        alt={t(`blog.articles.${article.id}.title`, article.title)}
+                        seed={article.slug}
+                        category={article.category}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                       <span className="absolute top-3 left-3 px-2 py-1 bg-medical-600 text-white text-xs rounded-full">{t(`blog.categoriesMap.${article.category}`, article.category)}</span>
                     </div>
                     <div className="p-5">
@@ -124,7 +131,13 @@ const HealthyBlog = () => {
                     <Link to={`/blog/${article.slug}`}>
                       <Card className="!p-0 overflow-hidden group h-full hover:shadow-medical-lg">
                         <div className="relative h-40 overflow-hidden">
-                          <img src={article.coverImage} alt={t(`blog.articles.${article.id}.title`, article.title)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <BlogImage
+                        src={article.coverImage}
+                        alt={t(`blog.articles.${article.id}.title`, article.title)}
+                        seed={article.slug}
+                        category={article.category}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                           {bookmarks.includes(article.slug) && (
                             <FiBookmark className="absolute top-2 right-2 text-medical-500 fill-medical-500" />
                           )}

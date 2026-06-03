@@ -3,6 +3,13 @@ import { apiJson, getAccessToken } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { normalizeAppointment } from '../utils/appointmentHelpers';
 
+// Generate a deterministic key for storing doctor override in localStorage (using ID if present, otherwise date/startTime/doctorId)
+const getOverrideKey = (apt) => {
+  if (apt._id) return `override_${apt._id}`;
+  if (apt.date && apt.startTime && apt.doctorId) return `override_${apt.date}_${apt.startTime}_${apt.doctorId}`;
+  return null;
+};
+
 const AppointmentsContext = createContext();
 
 export const AppointmentsProvider = ({ children }) => {
@@ -18,7 +25,20 @@ export const AppointmentsProvider = ({ children }) => {
     setLoading(true);
     try {
       const data = await apiJson('/api/appointments/user');
-      setAppointments(Array.isArray(data) ? data.map(normalizeAppointment) : []);
+      // Normalize incoming data
+      const normalizedData = Array.isArray(data) ? data.map(normalizeAppointment) : [];
+      // Apply persisted overrides from localStorage (in case of page refresh)
+      const storedOverrides = JSON.parse(localStorage.getItem('appointmentOverrides') || '{}');
+      const merged = normalizedData.map((apt) => {
+        const key = getOverrideKey(apt);
+        if (key && storedOverrides[key]) {
+          const o = storedOverrides[key];
+          if (o.doctorName) apt.doctorName = o.doctorName;
+          if (o.doctorId) apt.doctorId = o.doctorId;
+        }
+        return apt;
+      });
+      setAppointments(merged);
     } catch (err) {
       console.error('Failed to fetch appointments:', err);
     } finally {
@@ -45,7 +65,24 @@ export const AppointmentsProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify(appointmentData),
     });
-    const normalized = normalizeAppointment(data);
+    let normalized = normalizeAppointment(data);
+    // Override with request data if provided, ensuring correct doctor info
+    if (appointmentData.doctorName) {
+      normalized.doctorName = appointmentData.doctorName;
+    }
+    if (appointmentData.doctorId) {
+      normalized.doctorId = appointmentData.doctorId;
+    }
+    // Persist override in localStorage for future fetches (e.g., after page refresh)
+    if (normalized._id && normalized.doctorId && normalized.date && normalized.startTime) {
+      const key = getOverrideKey(normalized);
+      const overrides = JSON.parse(localStorage.getItem('appointmentOverrides') || '{}');
+      overrides[key] = {
+        doctorName: normalized.doctorName,
+        doctorId: normalized.doctorId,
+      };
+      localStorage.setItem('appointmentOverrides', JSON.stringify(overrides));
+    }
     setAppointments((prev) => [normalized, ...prev]);
     return normalized;
   };

@@ -21,7 +21,7 @@ export const normalizeAppointment = (apt) => {
 
   return {
     ...apt,
-    doctorName: apt.doctor?.name || apt.doctorName || 'Doctor',
+    doctorName: apt.doctorName || apt.doctor?.name || 'Doctor',
     specialty:
       apt.doctor?.doctorProfile?.specialization ||
       apt.specialty ||

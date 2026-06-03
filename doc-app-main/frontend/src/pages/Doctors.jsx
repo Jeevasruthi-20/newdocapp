@@ -168,12 +168,11 @@ const Doctors = () => {
     const startTime = to24Hour(bookingData.time);
 
     try {
-      const doctorId = (selectedDoctor && typeof selectedDoctor.id === 'string' && /^[a-f0-9]{24}$/.test(selectedDoctor.id))
-        ? selectedDoctor.id
-        : null;
+      const doctorId = String(selectedDoctor.id);
 
       await addAppointment({
         doctorId,
+        doctorName: selectedDoctor.name,
         date: bookingData.date,
         startTime,
         endTime: addMinutes(startTime, 30),

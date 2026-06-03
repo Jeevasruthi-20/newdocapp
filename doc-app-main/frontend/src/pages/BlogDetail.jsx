@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { getArticleBySlug, getRelatedArticles } from '../data/blogArticles';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import BlogImage from '../components/BlogImage';
 
 const BlogDetail = () => {
   const { slug } = useParams();
@@ -58,7 +59,13 @@ const BlogDetail = () => {
   return (
     <article className="min-h-screen bg-white">
       <div className="relative h-64 sm:h-80 overflow-hidden">
-        <img src={article.coverImage} alt={t(`blog.articles.${article.id}.title`, article.title)} className="w-full h-full object-cover" />
+        <BlogImage
+          src={article.coverImage}
+          alt={t(`blog.articles.${article.id}.title`, article.title)}
+          seed={article.slug}
+          category={article.category}
+          className="w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 max-w-4xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-medical-500 text-white text-xs font-medium mb-3">
@@ -71,7 +78,13 @@ const BlogDetail = () => {
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <img src={article.authorAvatar} alt={article.author} className="w-12 h-12 rounded-full object-cover" />
+            <BlogImage
+              src={article.authorAvatar}
+              alt={article.author}
+              seed={article.slug}
+              type="avatar"
+              className="w-12 h-12 rounded-full object-cover"
+            />
             <div>
               <p className="font-semibold text-slate-800">{article.author}</p>
               <p className="text-sm text-slate-500">{t(`blog.articles.${article.id}.authorRole`, article.authorRole)}</p>
@@ -111,7 +124,13 @@ const BlogDetail = () => {
               {related.map((r) => (
                 <Link key={r.id} to={`/blog/${r.slug}`}>
                   <Card className="!p-0 overflow-hidden h-full">
-                    <img src={r.coverImage} alt={t(`blog.articles.${r.id}.title`, r.title)} className="h-32 w-full object-cover" />
+                    <BlogImage
+                      src={r.coverImage}
+                      alt={t(`blog.articles.${r.id}.title`, r.title)}
+                      seed={r.slug}
+                      category={r.category}
+                      className="h-32 w-full object-cover"
+                    />
                     <div className="p-3">
                       <p className="font-semibold text-sm text-slate-800 line-clamp-2">{t(`blog.articles.${r.id}.title`, r.title)}</p>
                     </div>
