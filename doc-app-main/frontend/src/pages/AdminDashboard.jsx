@@ -25,6 +25,12 @@ const AdminDashboard = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -74,6 +80,58 @@ const AdminDashboard = () => {
     }
   };
 
+  // ---- Filtering & Sorting Logic ----
+  const getFilteredAppointments = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 7);
+
+    const monthEnd = new Date(today);
+    monthEnd.setDate(today.getDate() + 30);
+
+    return appointments
+      .filter((app) => {
+        // Text search: patient or doctor name
+        const search = searchTerm.toLowerCase();
+        const patientName = (app.patient?.name || "").toLowerCase();
+        const doctorName = (app.doctor?.name || "").toLowerCase();
+        const reason = (app.reason || "").toLowerCase();
+        if (search && !patientName.includes(search) && !doctorName.includes(search) && !reason.includes(search)) {
+          return false;
+        }
+
+        // Status filter
+        if (statusFilter !== "all" && app.status !== statusFilter) return false;
+
+        // Date filter
+        if (dateFilter !== "all") {
+          const appDate = new Date(app.date);
+          appDate.setHours(0, 0, 0, 0);
+          if (dateFilter === "today" && appDate.getTime() !== today.getTime()) return false;
+          if (dateFilter === "tomorrow" && appDate.getTime() !== tomorrow.getTime()) return false;
+          if (dateFilter === "week" && (appDate < today || appDate > weekEnd)) return false;
+          if (dateFilter === "month" && (appDate < today || appDate > monthEnd)) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+      });
+  };
+
+  const filteredAppointments = getFilteredAppointments();
+
+  // Count for quick tabs
+  const countByStatus = (status) => appointments.filter((a) => a.status === status).length;
+
   if (!currentUser || currentUser.role !== "admin") return null;
 
   return (
@@ -83,10 +141,10 @@ const AdminDashboard = () => {
           <span>🏥</span> Admin Panel
         </div>
         <nav className="admin-nav">
-          <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}>Overview</button>
-          <button className={activeTab === "appointments" ? "active" : ""} onClick={() => setActiveTab("appointments")}>Appointments</button>
-          <button className={activeTab === "patients" ? "active" : ""} onClick={() => setActiveTab("patients")}>Patients</button>
-          <button onClick={logout} className="admin-logout-btn">Logout</button>
+          <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}>📊 Overview</button>
+          <button className={activeTab === "appointments" ? "active" : ""} onClick={() => setActiveTab("appointments")}>📅 Appointments</button>
+          <button className={activeTab === "patients" ? "active" : ""} onClick={() => setActiveTab("patients")}>👥 Patients</button>
+          <button onClick={logout} className="admin-logout-btn">🚪 Logout</button>
         </nav>
       </div>
 
@@ -108,46 +166,151 @@ const AdminDashboard = () => {
           </div>
 
           <div className="admin-sections">
-            {activeTab === "overview" || activeTab === "appointments" ? (
+            {(activeTab === "overview" || activeTab === "appointments") && (
               <div className="admin-card">
                 <div className="card-header">
                   <h2>Appointment Management</h2>
+                  <div className="appt-count-badges">
+                    <span className="count-badge scheduled" onClick={() => setStatusFilter("scheduled")}>
+                      ⏳ Waiting: {countByStatus("scheduled")}
+                    </span>
+                    <span className="count-badge confirmed" onClick={() => setStatusFilter("confirmed")}>
+                      ✅ Confirmed: {countByStatus("confirmed")}
+                    </span>
+                    <span className="count-badge cancelled" onClick={() => setStatusFilter("cancelled")}>
+                      ❌ Rejected: {countByStatus("cancelled")}
+                    </span>
+                  </div>
                 </div>
-                {loading ? <p>Loading...</p> : (
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Patient</th>
-                        <th>Doctor</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {appointments.map(app => (
-                        <tr key={app._id}>
-                          <td>{app.patient?.name || 'Unknown'}</td>
-                          <td>{app.doctor?.name || 'Unknown'}</td>
-                          <td>{new Date(app.date).toLocaleDateString()}</td>
-                          <td><span className={`status-badge ${app.status}`}>{app.status}</span></td>
-                          <td>
-                            <div className="action-btns">
-                              {app.status === 'scheduled' && (
-                                <button className="approve-btn" onClick={() => handleUpdateStatus(app._id, 'confirmed')}>Approve</button>
-                              )}
-                              {app.status !== 'cancelled' && (
-                                <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>Reject</button>
-                              )}
-                            </div>
-                          </td>
+
+                {/* Filter Bar */}
+                <div className="admin-filters-bar">
+                  <div className="filter-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Search patient, doctor, reason..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                      <button className="clear-search" onClick={() => setSearchTerm("")}>✕</button>
+                    )}
+                  </div>
+
+                  <div className="filter-group">
+                    <label>Date</label>
+                    <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+                      <option value="all">All Dates</option>
+                      <option value="today">Today</option>
+                      <option value="tomorrow">Tomorrow</option>
+                      <option value="week">Next 7 Days</option>
+                      <option value="month">Next 30 Days</option>
+                    </select>
+                  </div>
+
+                  <div className="filter-group">
+                    <label>Status</label>
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                      <option value="all">All Statuses</option>
+                      <option value="scheduled">Waiting / Scheduled</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="cancelled">Rejected / Cancelled</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+
+                  <div className="filter-group">
+                    <label>Sort</label>
+                    <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                    </select>
+                  </div>
+
+                  {(searchTerm || statusFilter !== "all" || dateFilter !== "all") && (
+                    <button
+                      className="clear-all-filters"
+                      onClick={() => { setSearchTerm(""); setStatusFilter("all"); setDateFilter("all"); }}
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+
+                {/* Results count */}
+                <div className="filter-results-info">
+                  Showing <strong>{filteredAppointments.length}</strong> of <strong>{appointments.length}</strong> appointments
+                </div>
+
+                {loading ? <p className="loading-text">Loading...</p> : (
+                  filteredAppointments.length === 0 ? (
+                    <div className="no-results">
+                      <span>🔍</span>
+                      <p>No appointments found matching your filters.</p>
+                      <button onClick={() => { setSearchTerm(""); setStatusFilter("all"); setDateFilter("all"); }}>
+                        Reset Filters
+                      </button>
+                    </div>
+                  ) : (
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Patient</th>
+                          <th>Doctor</th>
+                          <th>Date</th>
+                          <th>Reason</th>
+                          <th>Status</th>
+                          <th>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredAppointments.map(app => (
+                          <tr key={app._id}>
+                            <td>
+                              <div className="patient-cell">
+                                <div className="patient-avatar">{(app.patient?.name || "?")[0].toUpperCase()}</div>
+                                {app.patient?.name || 'Unknown'}
+                              </div>
+                            </td>
+                            <td>{app.doctor?.name || 'Unknown'}</td>
+                            <td>
+                              <div className="date-cell">
+                                <span className="date-main">{new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                {app.startTime && <span className="date-time">{app.startTime}</span>}
+                              </div>
+                            </td>
+                            <td className="reason-cell">{app.reason || '—'}</td>
+                            <td>
+                              <span className={`status-badge ${app.status}`}>
+                                {app.status === 'scheduled' ? '⏳ Waiting' :
+                                 app.status === 'confirmed' ? '✅ Confirmed' :
+                                 app.status === 'cancelled' ? '❌ Rejected' :
+                                 app.status === 'completed' ? '🏁 Completed' :
+                                 app.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="action-btns">
+                                {(app.status === 'scheduled' || app.status === 'pending') && (
+                                  <button className="approve-btn" onClick={() => handleUpdateStatus(app._id, 'confirmed')}>Approve</button>
+                                )}
+                                {app.status !== 'cancelled' && app.status !== 'completed' && (
+                                  <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>Reject</button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
                 )}
               </div>
-            ) : null}
+            )}
 
             {activeTab === "patients" && (
               <div className="admin-card">
@@ -166,7 +329,12 @@ const AdminDashboard = () => {
                   <tbody>
                     {patients.map(p => (
                       <tr key={p._id}>
-                        <td>{p.name}</td>
+                        <td>
+                          <div className="patient-cell">
+                            <div className="patient-avatar">{(p.name || "?")[0].toUpperCase()}</div>
+                            {p.name}
+                          </div>
+                        </td>
                         <td>{p.email}</td>
                         <td>{new Date(p.createdAt).toLocaleDateString()}</td>
                         <td>

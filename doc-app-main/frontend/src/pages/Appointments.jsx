@@ -45,7 +45,7 @@ const Appointments = () => {
   const { appointments, cancelAppointment, addAppointment, fetchAppointments, loading } = useAppointments();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [activeTab, setActiveTab] = useState("waiting");
   const [showModal, setShowModal] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,18 +104,21 @@ const Appointments = () => {
   now.setHours(0, 0, 0, 0);
 
   const filteredAppointments = appointments.filter((apt) => {
-    const aptDateTime = getAppointmentDate(apt);
-    aptDateTime.setHours(0, 0, 0, 0);
-
-    if (activeTab === "upcoming") {
-      return UPCOMING_STATUSES.includes(apt.status) && aptDateTime >= now;
+    if (activeTab === "waiting") {
+      return ["scheduled", "pending"].includes(apt.status);
     }
-    return aptDateTime < now || apt.status === "cancelled" || apt.status === "completed";
+    if (activeTab === "confirmed") {
+      return apt.status === "confirmed";
+    }
+    if (activeTab === "rejected") {
+      return apt.status === "cancelled";
+    }
+    return true;
   });
 
-  const scheduledCount = appointments.filter((a) =>
-    ['scheduled', 'pending'].includes(a.status)
-  ).length;
+  const waitingCount   = appointments.filter((a) => ['scheduled', 'pending'].includes(a.status)).length;
+  const confirmedCount = appointments.filter((a) => a.status === 'confirmed').length;
+  const rejectedCount  = appointments.filter((a) => a.status === 'cancelled').length;
 
   const resetBooking = () => {
     setShowModal(false);
@@ -159,7 +162,7 @@ const Appointments = () => {
         });
       toast.success("Appointment booked successfully!");
       resetBooking();
-      setActiveTab('upcoming');
+      setActiveTab('waiting');
     } catch (err) {
       toast.error(err.message || 'Booking failed');
     } finally {
@@ -182,36 +185,42 @@ const Appointments = () => {
         </div>
 
         <div className="apt-stats-grid">
-          <div className="stat-card">
+          <div className="stat-card clickable-stat" onClick={() => setActiveTab('waiting')}>
+            <div className="stat-icon bg-yellow-100 text-yellow-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div className="stat-info">
+              <h3>{waitingCount}</h3>
+              <p>Waiting</p>
+            </div>
+          </div>
+          <div className="stat-card clickable-stat" onClick={() => setActiveTab('confirmed')}>
             <div className="stat-icon bg-blue-100 text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
             <div className="stat-info">
-              <h3>{appointments.filter((a) => a.status === 'confirmed').length}</h3>
+              <h3>{confirmedCount}</h3>
               <p>{t('appointments.confirmed')}</p>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon bg-yellow-100 text-yellow-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
-            <div className="stat-info">
-              <h3>{scheduledCount}</h3>
-              <p>{t('appointments.scheduled')}</p>
-            </div>
-          </div>
-          <div className="stat-card">
+          <div className="stat-card clickable-stat" onClick={() => setActiveTab('rejected')}>
             <div className="stat-icon bg-red-100 text-red-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
             <div className="stat-info">
-              <h3>{appointments.filter((a) => a.status === 'cancelled').length}</h3>
-              <p>{t('appointments.cancelled')}</p>
+              <h3>{rejectedCount}</h3>
+              <p>Rejected</p>
             </div>
           </div>
         </div>
 
         <div className="apt-main-content">
           <div className="modern-tabs">
-            <button className={`tab ${activeTab === 'upcoming' ? 'active' : ''}`} onClick={() => setActiveTab('upcoming')}>
-              {t('appointments.upcomingTab')}
+            <button className={`tab ${activeTab === 'waiting' ? 'active' : ''}`} onClick={() => setActiveTab('waiting')}>
+              ⏳ Waiting
+              {waitingCount > 0 && <span className="tab-count">{waitingCount}</span>}
             </button>
-            <button className={`tab ${activeTab === 'past' ? 'active' : ''}`} onClick={() => setActiveTab('past')}>
-              {t('appointments.pastTab')}
+            <button className={`tab ${activeTab === 'confirmed' ? 'active' : ''}`} onClick={() => setActiveTab('confirmed')}>
+              ✅ Confirmed
+              {confirmedCount > 0 && <span className="tab-count confirmed-count">{confirmedCount}</span>}
+            </button>
+            <button className={`tab ${activeTab === 'rejected' ? 'active' : ''}`} onClick={() => setActiveTab('rejected')}>
+              ❌ Rejected
+              {rejectedCount > 0 && <span className="tab-count rejected-count">{rejectedCount}</span>}
             </button>
           </div>
 
@@ -220,9 +229,17 @@ const Appointments = () => {
               <div className="loader-container"><div className="spinner"></div></div>
             ) : filteredAppointments.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">📅</div>
+                <div className="empty-icon">
+                  {activeTab === 'waiting' ? '⏳' : activeTab === 'confirmed' ? '✅' : '📋'}
+                </div>
                 <h3>{t('appointments.noAppointments')}</h3>
-                <p>{activeTab === 'upcoming' ? t('appointments.upcomingEmpty') : t('appointments.pastEmpty')}</p>
+                <p>
+                  {activeTab === 'waiting'
+                    ? 'You have no appointments waiting for approval.'
+                    : activeTab === 'confirmed'
+                    ? 'You have no confirmed appointments yet.'
+                    : 'You have no rejected appointments.'}
+                </p>
               </div>
             ) : (
               <div className="apt-list">
