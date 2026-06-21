@@ -48,6 +48,7 @@ const Navbar = () => {
     { to: '/about', label: t('nav.about') },
     { to: '/blog', label: t('nav.healthTips') },
     { to: '/doctors', label: t('nav.findDoctor') },
+    { to: '/symptom-checker', label: '🤖 Symptom Checker' },
   ];
 
   return (
@@ -105,6 +106,7 @@ const Navbar = () => {
                       >
                         <Link to="/dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.dashboard')}</Link>
                         <Link to="/appointments" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.appointments')}</Link>
+                        <Link to="/health-timeline" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>📊 Health Timeline</Link>
                         <Link to="/profile" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.profile')}</Link>
                         <Link to="/prescriptions" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('prescription.title')}</Link>
                         <Link to="/billing" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.billing')}</Link>

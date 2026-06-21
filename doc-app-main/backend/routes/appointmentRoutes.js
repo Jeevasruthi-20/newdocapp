@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
+const DoctorSchedule = require('../models/DoctorSchedule');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
@@ -64,7 +65,7 @@ router.get('/user', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { doctorId, date, startTime, endTime, reason, appointmentType } = req.body;
+    const { doctorId, date, startTime, endTime, reason, appointmentType, type } = req.body;
 
     if (!date || !reason?.trim()) {
       return res.status(400).json({ message: 'Date and reason are required' });
@@ -93,6 +94,8 @@ router.post('/', async (req, res) => {
     const count = await Appointment.countDocuments();
     const appointmentNumber = `APT-${String(count + 1).padStart(6, '0')}`;
 
+    const meetLink = type === 'video' ? `https://meet.jit.si/medconnect-${Math.random().toString(36).substring(2, 10)}` : undefined;
+
     const appointment = await Appointment.create({
       appointmentNumber,
       patient: req.user._id,
@@ -102,6 +105,8 @@ router.post('/', async (req, res) => {
       endTime: end,
       reason: reason.trim(),
       appointmentType: appointmentType || 'consultation',
+      type: type || 'in-person',
+      meetLink,
       status: 'scheduled',
       payment: { consultationFee: 500, paymentStatus: 'pending' },
       createdBy: req.user._id,
@@ -170,6 +175,402 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Appointment cancelled' });
   } catch (error) {
     res.status(500).json({ message: 'Error cancelling appointment' });
+  }
+});
+
+/* ─── GET /api/appointments/available-slots ─────────────────────────────────
+   Returns array of already-taken startTimes (24h) for a doctor on a date.
+   Excludes a specific appointment ID (used when rescheduling own appt).
+─────────────────────────────────────────────────────────────────────────── */
+router.get('/available-slots', async (req, res) => {
+  try {
+    const { doctorId, date, excludeId } = req.query;
+    if (!doctorId || !date) {
+      return res.status(400).json({ message: 'doctorId and date are required' });
+    }
+
+    const query = {
+      doctor: doctorId,
+      date: new Date(date),
+      status: { $in: ['scheduled', 'confirmed', 'in-progress'] },
+    };
+    if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
+      query._id = { $ne: excludeId };
+    }
+
+    const booked = await Appointment.find(query).select('startTime');
+    const takenTimes = booked.map((a) => a.startTime);
+    res.json(takenTimes);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching available slots', error: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/reschedule ───────────────────────────────────
+   Reschedule a pending appointment:
+   - Only allowed if status is 'scheduled' (pending), not confirmed
+   - Validates slot availability (no double-booking)
+   - Keeps status as 'scheduled'
+   - Sends email notifications to patient and doctor
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/reschedule', async (req, res) => {
+  try {
+    const { date, startTime, endTime } = req.body;
+
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ message: 'date, startTime, and endTime are required' });
+    }
+
+    // Find appointment belonging to this patient
+    const appointment = await Appointment.findOne({
+      _id: req.params.id,
+      patient: req.user._id,
+    }).populate('doctor', 'name email').populate('patient', 'name email');
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Block rescheduling if confirmed
+    if (appointment.status === 'confirmed') {
+      return res.status(400).json({
+        message: 'Rescheduling is not allowed after the doctor has confirmed your appointment.',
+      });
+    }
+
+    // Block rescheduling of cancelled appointments
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({ message: 'Cannot reschedule a cancelled appointment.' });
+    }
+
+    // Check past date
+    const requestedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (requestedDate < today) {
+      return res.status(400).json({ message: 'Cannot reschedule to a past date.' });
+    }
+
+    // Check slot availability (exclude current appointment itself)
+    const isAvailable = await Appointment.isSlotAvailable(
+      appointment.doctor._id,
+      date,
+      startTime,
+      endTime,
+      appointment._id
+    );
+
+    if (!isAvailable) {
+      return res.status(409).json({
+        message: 'That time slot is already booked. Please choose a different time.',
+      });
+    }
+
+    // Save old values for email
+    const oldDate      = appointment.date;
+    const oldStartTime = appointment.startTime;
+
+    // Update the appointment
+    appointment.date      = new Date(date);
+    appointment.startTime = startTime;
+    appointment.endTime   = endTime;
+    appointment.status    = 'scheduled'; // keep as pending
+    appointment.updatedBy = req.user._id;
+    await appointment.save();
+
+    // ── Email to Patient ──────────────────────────────────────────────────
+    const patientName = appointment.patient?.name || 'Patient';
+    const doctorName  = appointment.doctor?.name  || 'Your Doctor';
+    const newDateStr  = new Date(date).toDateString();
+    const oldDateStr  = new Date(oldDate).toDateString();
+
+    const patientHtml = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+        <div style="background:linear-gradient(135deg,#7c3aed,#0069c0);padding:24px;border-radius:12px 12px 0 0">
+          <h2 style="color:#fff;margin:0">📅 Appointment Rescheduled</h2>
+        </div>
+        <div style="padding:24px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
+          <p>Dear <strong>${patientName}</strong>,</p>
+          <p>Your appointment with <strong>Dr. ${doctorName}</strong> has been rescheduled.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <tr style="background:#f8fafc">
+              <td style="padding:10px;font-weight:bold;color:#64748b">Previous Date</td>
+              <td style="padding:10px">${oldDateStr} at ${oldStartTime}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px;font-weight:bold;color:#64748b">New Date</td>
+              <td style="padding:10px;color:#16a34a"><strong>${newDateStr} at ${startTime}</strong></td>
+            </tr>
+            <tr style="background:#f8fafc">
+              <td style="padding:10px;font-weight:bold;color:#64748b">Status</td>
+              <td style="padding:10px">⏳ Pending Doctor Confirmation</td>
+            </tr>
+          </table>
+          <p style="color:#64748b;font-size:0.9rem">The appointment status remains <em>Pending</em> until the doctor confirms the new time.</p>
+          <p>Thank you for using <strong>MedConnect</strong>.</p>
+        </div>
+      </div>
+    `;
+
+    // ── Email to Doctor ───────────────────────────────────────────────────
+    const doctorHtml = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+        <div style="background:linear-gradient(135deg,#0069c0,#0ea5e9);padding:24px;border-radius:12px 12px 0 0">
+          <h2 style="color:#fff;margin:0">🔔 Patient Rescheduled an Appointment</h2>
+        </div>
+        <div style="padding:24px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
+          <p>Dear <strong>Dr. ${doctorName}</strong>,</p>
+          <p>Your patient <strong>${patientName}</strong> has rescheduled their appointment.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <tr style="background:#f8fafc">
+              <td style="padding:10px;font-weight:bold;color:#64748b">Patient</td>
+              <td style="padding:10px">${patientName}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px;font-weight:bold;color:#64748b">Previous Slot</td>
+              <td style="padding:10px">${oldDateStr} at ${oldStartTime}</td>
+            </tr>
+            <tr style="background:#f8fafc">
+              <td style="padding:10px;font-weight:bold;color:#64748b">New Slot</td>
+              <td style="padding:10px;color:#16a34a"><strong>${newDateStr} at ${startTime}</strong></td>
+            </tr>
+          </table>
+          <p style="color:#64748b;font-size:0.9rem">Please log in to the MedConnect admin panel to review and confirm the new appointment time.</p>
+        </div>
+      </div>
+    `;
+
+    // Send emails (non-blocking — don't fail the response if email fails)
+    const emailPromises = [];
+    if (appointment.patient?.email) {
+      emailPromises.push(
+        sendEmail({
+          email: appointment.patient.email,
+          subject: '📅 MedConnect — Your Appointment Has Been Rescheduled',
+          message: patientHtml,
+        }).catch((e) => console.error('Patient email error:', e))
+      );
+    }
+    if (appointment.doctor?.email) {
+      emailPromises.push(
+        sendEmail({
+          email: appointment.doctor.email,
+          subject: `🔔 MedConnect — ${patientName} Rescheduled Their Appointment`,
+          message: doctorHtml,
+        }).catch((e) => console.error('Doctor email error:', e))
+      );
+    }
+    await Promise.allSettled(emailPromises);
+
+    // Re-populate for response
+    const updated = await Appointment.findById(appointment._id)
+      .populate('doctor', 'name doctorProfile')
+      .populate('patient', 'name email');
+
+    res.json({ message: 'Appointment rescheduled successfully', appointment: updated });
+  } catch (error) {
+    console.error('Reschedule error:', error);
+    res.status(500).json({ message: error.message || 'Error rescheduling appointment' });
+  }
+});
+
+/* ─── PUT /api/appointments/doctor-delay ────────────────────────────────────
+   Doctor reports a delay. Updates delayMinutes and cascades expectedStartTime
+   for all subsequent appointments for that doctor on that day.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/doctor-delay', async (req, res) => {
+  try {
+    const { delayMinutes, date, fromTime } = req.body;
+    
+    if (req.user.role !== 'doctor' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only doctors can report delays' });
+    }
+
+    const doctorId = req.user._id;
+    const targetDate = new Date(date);
+    targetDate.setHours(0,0,0,0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    // Find all appointments from this time onwards on this day
+    const appointments = await Appointment.find({
+      doctor: doctorId,
+      date: { $gte: targetDate, $lt: nextDay },
+      status: { $in: ['scheduled', 'confirmed'] },
+      startTime: { $gte: fromTime }
+    }).sort({ startTime: 1 });
+
+    const updatedAppointments = [];
+
+    for (let apt of appointments) {
+      apt.delayMinutes = delayMinutes;
+      
+      // Calculate expectedStartTime
+      const [h, m] = apt.startTime.split(':').map(Number);
+      const totalMins = h * 60 + m + Number(delayMinutes);
+      const expectedH = Math.floor(totalMins / 60) % 24;
+      const expectedM = totalMins % 60;
+      apt.expectedStartTime = `${String(expectedH).padStart(2, '0')}:${String(expectedM).padStart(2, '0')}`;
+      
+      await apt.save();
+      updatedAppointments.push(apt);
+
+      // Email Patient
+      if (apt.patient) {
+        const patient = await User.findById(apt.patient);
+        if (patient && patient.email) {
+          const html = `
+            <h2>Appointment Delay Notice</h2>
+            <p>Dear ${patient.name},</p>
+            <p>Your doctor is currently running behind schedule.</p>
+            <p>Your expected consultation time has been updated from <strong>${apt.startTime}</strong> to <strong>${apt.expectedStartTime}</strong>.</p>
+            <p>We apologize for the inconvenience.</p>
+          `;
+          sendEmail({
+            email: patient.email,
+            subject: 'MedConnect - Appointment Delay Update',
+            message: html
+          }).catch(console.error);
+        }
+      }
+    }
+
+    res.json({ message: `Updated delay for ${updatedAppointments.length} appointments`, appointments: updatedAppointments });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/check-in ────────────────────────────────────
+   Patient checks in when arriving at the clinic.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/check-in', async (req, res) => {
+  try {
+    const appointment = await Appointment.findOne({ _id: req.params.id, patient: req.user._id });
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+    
+    if (appointment.checkInTime) {
+      return res.status(400).json({ message: 'Already checked in' });
+    }
+
+    // Assign a queue number for the day
+    const targetDate = new Date(appointment.date);
+    targetDate.setHours(0,0,0,0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const count = await Appointment.countDocuments({
+      doctor: appointment.doctor,
+      date: { $gte: targetDate, $lt: nextDay },
+      checkInTime: { $exists: true }
+    });
+
+    appointment.checkInTime = new Date();
+    appointment.queueNumber = count + 1;
+    await appointment.save();
+
+    res.json({ message: 'Checked in successfully', appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── GET /api/appointments/queue/:doctorId ─────────────────────────────────
+   Get live queue details for a specific doctor today.
+─────────────────────────────────────────────────────────────────────────── */
+router.get('/queue/:doctorId', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const checkedInAppointments = await Appointment.find({
+      doctor: req.params.doctorId,
+      date: { $gte: today, $lt: tomorrow },
+      checkInTime: { $exists: true },
+      status: { $nin: ['completed', 'cancelled', 'no-show'] }
+    }).sort({ queueNumber: 1 }).populate('patient', 'name');
+
+    res.json({
+      totalWaiting: checkedInAppointments.length,
+      currentPatient: checkedInAppointments.length > 0 ? checkedInAppointments[0] : null,
+      queue: checkedInAppointments
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/prescription ────────────────────────────────
+   Doctor saves a prescription for the appointment.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/prescription', async (req, res) => {
+  try {
+    if (req.user.role !== 'doctor' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only doctors can upload prescriptions' });
+    }
+
+    const { prescription } = req.body;
+    if (!prescription) {
+      return res.status(400).json({ message: 'Prescription text is required' });
+    }
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+    appointment.prescription = prescription;
+    appointment.status = 'completed'; // auto mark as completed when prescribed
+    await appointment.save();
+
+    res.json({ message: 'Prescription saved successfully', appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── DOCTOR SCHEDULE ENDPOINTS ───────────────────────────────────────────── */
+
+router.get('/schedule', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'doctor') return res.status(403).json({ message: 'Forbidden' });
+    let schedule = await DoctorSchedule.findOne({ doctor: req.user._id });
+    if (!schedule) {
+      schedule = await DoctorSchedule.create({ doctor: req.user._id });
+    }
+    res.json(schedule);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put('/schedule/block-date', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'doctor') return res.status(403).json({ message: 'Forbidden' });
+    const { date, reason } = req.body;
+    let schedule = await DoctorSchedule.findOne({ doctor: req.user._id });
+    if (!schedule) {
+      schedule = await DoctorSchedule.create({ doctor: req.user._id });
+    }
+    schedule.blockedDates.push({ date: new Date(date), reason });
+    await schedule.save();
+    res.json({ message: 'Date blocked', schedule });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete('/schedule/block-date/:id', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'doctor') return res.status(403).json({ message: 'Forbidden' });
+    let schedule = await DoctorSchedule.findOne({ doctor: req.user._id });
+    if (schedule) {
+      schedule.blockedDates = schedule.blockedDates.filter(bd => bd._id.toString() !== req.params.id);
+      await schedule.save();
+    }
+    res.json({ message: 'Block removed', schedule });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

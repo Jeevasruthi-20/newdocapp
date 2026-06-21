@@ -37,6 +37,11 @@ const appointmentSchema = new mongoose.Schema({
   },
   
   // Type and Purpose
+  type: {
+    type: String,
+    enum: ['in-person', 'video'],
+    default: 'in-person'
+  },
   appointmentType: {
     type: String,
     enum: ['consultation', 'follow-up', 'check-up', 'procedure', 'test', 'other'],
@@ -73,14 +78,37 @@ const appointmentSchema = new mongoose.Schema({
     paymentDate: Date
   },
   
+  // Telemedicine & Prescriptions
+  meetLink: String,
+  prescription: String,
+
   // Status and Tracking
   status: {
     type: String,
-    enum: ['scheduled', 'confirmed', 'in-progress', 'completed', 'cancelled', 'no-show'],
+    enum: ['scheduled', 'confirmed', 'completed', 'cancelled', 'rescheduled', 'in-progress'],
     default: 'scheduled'
   },
+  
+  // Automations
+  reminder24hSent: { type: Boolean, default: false },
+  reminder1hSent: { type: Boolean, default: false },
   cancellationReason: String,
   cancellationDate: Date,
+  
+  // Delay Management & Queue
+  delayMinutes: {
+    type: Number,
+    default: 0
+  },
+  expectedStartTime: {
+    type: String // will default to startTime if no delay
+  },
+  checkInTime: Date,
+  queueNumber: Number,
+  isEmergency: {
+    type: Boolean,
+    default: false
+  },
   
   // Medical Details
   diagnosis: [{
@@ -128,6 +156,9 @@ const assignAppointmentNumber = async function () {
   if (this.isNew && !this.appointmentNumber) {
     const count = await this.constructor.countDocuments();
     this.appointmentNumber = `APT-${(count + 1).toString().padStart(6, '0')}`;
+  }
+  if (!this.expectedStartTime) {
+    this.expectedStartTime = this.startTime;
   }
 };
 

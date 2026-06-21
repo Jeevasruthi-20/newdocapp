@@ -25,11 +25,18 @@ const AdminDashboard = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
+
+  // Delay form state
+  const [delayMinutes, setDelayMinutes] = useState("");
+  const [delayStartTime, setDelayStartTime] = useState("");
+
+  // Prescription modal state
+  const [prescriptionTarget, setPrescriptionTarget] = useState(null);
+  const [prescriptionText, setPrescriptionText] = useState("");
 
   const fetchData = async () => {
     try {
@@ -67,6 +74,47 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error("Status update error:", error);
+    }
+  };
+
+  const handleReportDelay = async () => {
+    if (!delayMinutes || !delayStartTime) {
+      alert("Please enter minutes and starting time.");
+      return;
+    }
+    try {
+      await apiJson(`/api/appointments/doctor-delay`, {
+        method: "PUT",
+        body: JSON.stringify({
+          delayMinutes: Number(delayMinutes),
+          date: new Date().toISOString().split('T')[0],
+          fromTime: delayStartTime
+        })
+      });
+      alert(`Successfully added a ${delayMinutes} min delay starting at ${delayStartTime}`);
+      setDelayMinutes("");
+      setDelayStartTime("");
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to report delay.");
+    }
+  };
+
+  const handleSavePrescription = async () => {
+    if (!prescriptionText.trim()) return;
+    try {
+      await apiJson(`/api/appointments/${prescriptionTarget._id}/prescription`, {
+        method: "PUT",
+        body: JSON.stringify({ prescription: prescriptionText })
+      });
+      alert("Prescription saved successfully!");
+      setPrescriptionTarget(null);
+      setPrescriptionText("");
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save prescription.");
     }
   };
 
@@ -183,6 +231,15 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
+                <div className="admin-delay-bar" style={{ padding: '1rem', background: '#fff5f5', borderLeft: '4px solid #ff4b4b', marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <strong style={{ color: '#c53030' }}>⚠️ Report Delay:</strong>
+                  <input type="number" placeholder="Mins (e.g. 30)" value={delayMinutes} onChange={e => setDelayMinutes(e.target.value)} style={{ width: '120px', padding: '0.5rem' }} />
+                  <span>from</span>
+                  <input type="time" value={delayStartTime} onChange={e => setDelayStartTime(e.target.value)} style={{ padding: '0.5rem' }} />
+                  <button className="btn" onClick={handleReportDelay} style={{ background: '#ff4b4b', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Apply Delay</button>
+                  <small style={{ color: '#718096' }}>All subsequent appointments will be pushed back automatically.</small>
+                </div>
+
                 {/* Filter Bar */}
                 <div className="admin-filters-bar">
                   <div className="filter-search">
@@ -281,6 +338,7 @@ const AdminDashboard = () => {
                               <div className="date-cell">
                                 <span className="date-main">{new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                 {app.startTime && <span className="date-time">{app.startTime}</span>}
+                                {app.delayMinutes > 0 && <span className="date-time" style={{color: 'red', fontSize:'0.75rem'}}>Delayed {app.delayMinutes}m (Now: {app.expectedStartTime})</span>}
                               </div>
                             </td>
                             <td className="reason-cell">{app.reason || '—'}</td>
@@ -292,14 +350,28 @@ const AdminDashboard = () => {
                                  app.status === 'completed' ? '🏁 Completed' :
                                  app.status}
                               </span>
+                              {app.checkInTime && <div style={{ fontSize: '0.75rem', color: '#38a169', marginTop: '4px', fontWeight: 'bold' }}>📍 Checked In (#{app.queueNumber})</div>}
+                              {app.prescription && <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>📄 Prescribed</div>}
                             </td>
                             <td>
-                              <div className="action-btns">
-                                {(app.status === 'scheduled' || app.status === 'pending') && (
-                                  <button className="approve-btn" onClick={() => handleUpdateStatus(app._id, 'confirmed')}>Approve</button>
+                              <div className="action-btns" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  {(app.status === 'scheduled' || app.status === 'pending') && (
+                                    <button className="approve-btn" onClick={() => handleUpdateStatus(app._id, 'confirmed')}>Approve</button>
+                                  )}
+                                  {app.status !== 'cancelled' && app.status !== 'completed' && (
+                                    <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>Reject</button>
+                                  )}
+                                </div>
+                                {app.type === 'video' && app.meetLink && (
+                                  <a href={app.meetLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm" style={{ background: '#3b82f6', color: '#fff', textAlign: 'center', textDecoration: 'none', padding: '4px' }}>
+                                    📹 Join Video Call
+                                  </a>
                                 )}
-                                {app.status !== 'cancelled' && app.status !== 'completed' && (
-                                  <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>Reject</button>
+                                {(app.status === 'confirmed' || app.status === 'in-progress' || app.checkInTime) && !app.prescription && (
+                                  <button className="btn btn-sm" style={{ background: '#10b981', color: 'white', padding: '4px' }} onClick={() => { setPrescriptionTarget(app); setPrescriptionText(""); }}>
+                                    ✍️ Write Prescription
+                                  </button>
                                 )}
                               </div>
                             </td>
@@ -349,6 +421,27 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Prescription Writing Modal */}
+      {prescriptionTarget && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '500px' }}>
+            <h2 style={{ marginBottom: '1rem' }}>Write Prescription</h2>
+            <p style={{ marginBottom: '1rem', color: '#4a5568' }}>Patient: {prescriptionTarget.patient?.name}</p>
+            <textarea 
+              rows="6" 
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', marginBottom: '1rem' }} 
+              placeholder="Rx..."
+              value={prescriptionText}
+              onChange={(e) => setPrescriptionText(e.target.value)}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button className="btn outline-btn" onClick={() => setPrescriptionTarget(null)}>Cancel</button>
+              <button className="btn" style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px' }} onClick={handleSavePrescription}>Save & Complete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

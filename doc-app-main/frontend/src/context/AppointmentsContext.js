@@ -94,9 +94,21 @@ export const AppointmentsProvider = ({ children }) => {
     );
   };
 
+  const rescheduleAppointment = async (id, { date, startTime, endTime }) => {
+    const data = await apiJson(`/api/appointments/${id}/reschedule`, {
+      method: 'PUT',
+      body: JSON.stringify({ date, startTime, endTime }),
+    });
+    const updated = normalizeAppointment(data.appointment || data);
+    setAppointments((prev) =>
+      prev.map((apt) => (apt._id === id ? { ...apt, ...updated } : apt))
+    );
+    return updated;
+  };
+
   return (
     <AppointmentsContext.Provider
-      value={{ appointments, addAppointment, cancelAppointment, fetchAppointments, loading, setAppointments }}
+      value={{ appointments, addAppointment, cancelAppointment, rescheduleAppointment, fetchAppointments, loading, setAppointments }}
     >
       {children}
     </AppointmentsContext.Provider>

@@ -8,6 +8,9 @@ import {
   getAppointmentDate,
   formatTime12,
 } from "../utils/appointmentHelpers";
+import RatingModal, { getRating } from "../components/RatingModal";
+import RescheduleModal from "../components/RescheduleModal";
+import { apiJson } from "../lib/api";
 import "./Appointments.css";
 
 const mockDoctors = [
@@ -42,7 +45,7 @@ const addMinutes = (time24, mins) => {
 
 const Appointments = () => {
   const { t } = useTranslation();
-  const { appointments, cancelAppointment, addAppointment, fetchAppointments, loading } = useAppointments();
+  const { appointments, cancelAppointment, addAppointment, fetchAppointments, loading, rescheduleAppointment, setAppointments } = useAppointments();
   const location = useLocation();
 
   const [activeTab, setActiveTab] = useState("waiting");
@@ -54,6 +57,9 @@ const Appointments = () => {
   const [selectedTime, setSelectedTime] = useState("");
   const [visitType, setVisitType] = useState("in-person");
   const [visitReason, setVisitReason] = useState("");
+  const [ratingTarget, setRatingTarget] = useState(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [prescriptionTarget, setPrescriptionTarget] = useState(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -102,6 +108,25 @@ const Appointments = () => {
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
+
+  const handleCheckIn = async (id) => {
+    try {
+      const { appointment } = await apiJson(`/api/appointments/${id}/check-in`, { method: 'PUT' });
+      setAppointments((prev) => prev.map((apt) => (apt._id === id ? { ...apt, ...appointment } : apt)));
+      toast.success('You have successfully checked in! The doctor will see you soon.');
+    } catch (error) {
+      toast.error(error.message || 'Failed to check in');
+    }
+  };
+
+  const to12HourLocal = (time24) => {
+    if (!time24) return "";
+    const [h, m] = time24.split(":");
+    const hours = parseInt(h, 10);
+    const suffix = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${m} ${suffix}`;
+  };
 
   const filteredAppointments = appointments.filter((apt) => {
     if (activeTab === "waiting") {
@@ -159,6 +184,7 @@ const Appointments = () => {
           endTime: addMinutes(startTime, 30),
           reason: visitReason.trim(),
           appointmentType: 'consultation',
+          type: visitType,
         });
       toast.success("Appointment booked successfully!");
       resetBooking();
@@ -203,7 +229,7 @@ const Appointments = () => {
             <div className="stat-icon bg-red-100 text-red-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
             <div className="stat-info">
               <h3>{rejectedCount}</h3>
-              <p>Rejected</p>
+              <p>{t('appointments.rejected')}</p>
             </div>
           </div>
         </div>
@@ -225,7 +251,7 @@ const Appointments = () => {
           </div>
 
           <div className="apt-list-wrapper">
-            {loading ? (
+            {loading && appointments.length === 0 ? (
               <div className="loader-container"><div className="spinner"></div></div>
             ) : filteredAppointments.length === 0 ? (
               <div className="empty-state">
@@ -264,11 +290,22 @@ const Appointments = () => {
                       </div>
                       <div className="detail-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        {apt.time || formatTime12(apt.startTime)}
+                        <p className="apt-reason">{apt.reason}</p>
+                        {apt.delayMinutes > 0 && (
+                          <div className="delay-badge">
+                            ⚠️ Doctor is running {apt.delayMinutes} mins late.
+                            Estimated time: {to12HourLocal(apt.expectedStartTime || apt.startTime)}
+                          </div>
+                        )}
                       </div>
-                      <div className="detail-item">
+                      <div className="apt-meta-info">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                         {apt.type === 'in-person' ? t('doctors.inPerson') : t('appointments.videoCall')}
+                        {apt.type === 'video' && apt.meetLink && ['scheduled', 'confirmed', 'in-progress'].includes(apt.status) && (
+                          <a href={apt.meetLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm meet-link-btn" style={{ marginLeft: '1rem', background: '#3b82f6', color: '#fff', textDecoration: 'none', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                            📹 Join Video Call
+                          </a>
+                        )}
                       </div>
                       {apt.reason && (
                         <div className="detail-item apt-reason">
@@ -277,8 +314,61 @@ const Appointments = () => {
                       )}
                     </div>
                     <div className="apt-card-footer">
+                      {/* Check-In Button (only if today, pending/scheduled, not already checked in) */}
+                      {UPCOMING_STATUSES.includes(apt.status) && getAppointmentDate(apt).toDateString() === new Date().toDateString() && !apt.checkInTime && (
+                        <button className="btn checkin-btn btn-sm" onClick={() => handleCheckIn(apt._id)}>📍 Check In Now</button>
+                      )}
+                      {apt.checkInTime && (
+                        <div className="checked-in-badge">✅ Checked In (Queue #{apt.queueNumber})</div>
+                      )}
+
+                      {/* Cancel button — for pending/scheduled only */}
                       {UPCOMING_STATUSES.includes(apt.status) && (
                         <button className="btn outline-btn btn-sm" onClick={() => handleCancelAppointment(apt._id)}>{t('appointments.cancelBtn')}</button>
+                      )}
+
+                      {/* Reschedule button — only when status is scheduled/pending */}
+                      {['scheduled', 'pending'].includes(apt.status) && (
+                        <button
+                          className="btn reschedule-btn btn-sm"
+                          onClick={() => setRescheduleTarget(apt)}
+                        >
+                          📅 Reschedule
+                        </button>
+                      )}
+
+                      {/* Locked notice when confirmed */}
+                      {apt.status === 'confirmed' && (
+                        <div className="rs-locked-notice">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                          Rescheduling not allowed after confirmation
+                        </div>
+                      )}
+
+                      {/* Rate Visit button */}
+                      {apt.status === 'completed' && !getRating(apt._id) && (
+                        <button
+                          className="btn rate-visit-btn btn-sm"
+                          onClick={() => setRatingTarget(apt)}
+                        >
+                          ⭐ Rate This Visit
+                        </button>
+                      )}
+                      {apt.status === 'completed' && getRating(apt._id) && (
+                        <div className="already-rated">
+                          {'★'.repeat(getRating(apt._id).rating)}{'☆'.repeat(5 - getRating(apt._id).rating)}
+                          <span>Rated</span>
+                        </div>
+                      )}
+
+                      {/* View Prescription */}
+                      {apt.prescription && (
+                        <button className="btn btn-sm" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #10b981' }} onClick={() => setPrescriptionTarget(apt)}>
+                          📄 View Prescription
+                        </button>
                       )}
                     </div>
                   </div>
@@ -390,6 +480,47 @@ const Appointments = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ratingTarget && (
+        <RatingModal
+          appointment={ratingTarget}
+          onClose={() => setRatingTarget(null)}
+          onSubmit={() => setRatingTarget(null)}
+        />
+      )}
+
+      {rescheduleTarget && (
+        <RescheduleModal
+          appointment={rescheduleTarget}
+          onClose={() => setRescheduleTarget(null)}
+          onRescheduled={async (updated) => {
+            await rescheduleAppointment(
+              rescheduleTarget._id,
+              { date: updated.date, startTime: updated.startTime, endTime: updated.endTime }
+            );
+            fetchAppointments();
+            setRescheduleTarget(null);
+          }}
+        />
+      )}
+
+      {/* Prescription View Modal */}
+      {prescriptionTarget && (
+        <div className="glass-modal-overlay fade-in" onClick={() => setPrescriptionTarget(null)}>
+          <div className="glass-modal scale-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', padding: '2rem' }}>
+            <button className="close-btn" onClick={() => setPrescriptionTarget(null)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <h2 style={{ marginBottom: '1rem', color: '#111827' }}>📄 Medical Prescription</h2>
+            <div style={{ background: '#f9fafb', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', color: '#374151', minHeight: '150px' }}>
+              {prescriptionTarget.prescription}
+            </div>
+            <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#6b7280', textAlign: 'right' }}>
+              Prescribed by Dr. {prescriptionTarget.doctorName || 'Doctor'} on {new Date(prescriptionTarget.date).toLocaleDateString()}
             </div>
           </div>
         </div>

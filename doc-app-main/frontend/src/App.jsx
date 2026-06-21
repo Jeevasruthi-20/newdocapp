@@ -19,6 +19,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import BillingCalculator from './pages/BillingCalculator';
+import SymptomChecker from './pages/SymptomChecker';
+import HealthTimeline from './pages/HealthTimeline';
 import PrivateRoute from './components/PrivateRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
@@ -43,12 +45,15 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogDetail />} />
               {/* Public Doctors route - accessible without login */}
               <Route path="/doctors" element={<Doctors />} />
+              {/* Public Symptom Checker */}
+              <Route path="/symptom-checker" element={<SymptomChecker />} />
               <Route element={<PrivateRoute />}>
                 <Route path="/dashboard" element={<PatientDashboard />} />
                 <Route path="/appointments" element={<Appointments />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/prescriptions" element={<Prescriptions />} />
                 <Route path="/billing" element={<BillingCalculator />} />
+                <Route path="/health-timeline" element={<HealthTimeline />} />
                 <Route path="/admin" element={<AdminDashboard />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

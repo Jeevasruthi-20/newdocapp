@@ -13,6 +13,7 @@ const userRoutes = require("./routes/userRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const initCronJobs = require('./jobs/cronJobs');
 const Prescription = require("./models/Prescription");
 const path = require("path");
 const helmet = require("helmet");
@@ -161,6 +162,9 @@ mongoose
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://127.0.0.1:${PORT}`);
     });
+
+    // Initialize background jobs
+    initCronJobs();
   })
   .catch((err) => {
     console.error("❌ DB connection error:", err);
