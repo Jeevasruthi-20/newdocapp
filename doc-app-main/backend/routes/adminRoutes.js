@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Appointment = require('../models/Appointment');
+const DoctorSchedule = require('../models/DoctorSchedule');
 const { adminAuth } = require('../middleware/adminMiddleware');
 
 router.use(adminAuth);
@@ -54,6 +55,57 @@ router.delete('/patient/:id', async (req, res) => {
     res.json({ message: 'Patient deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting patient', error: error.message });
+  }
+});
+
+// GET all doctors
+router.get('/doctors', async (req, res) => {
+  try {
+    const doctors = await User.find({ role: 'doctor' }).select('-password');
+    res.json(doctors);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching doctors', error: error.message });
+  }
+});
+
+// GET doctor schedule
+router.get('/schedule/:doctorId', async (req, res) => {
+  try {
+    let schedule = await DoctorSchedule.findOne({ doctor: req.params.doctorId });
+    if (!schedule) {
+      schedule = await DoctorSchedule.create({ doctor: req.params.doctorId });
+    }
+    res.json(schedule);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching schedule', error: error.message });
+  }
+});
+
+// POST block date for doctor
+router.post('/schedule/:doctorId/block-date', async (req, res) => {
+  try {
+    const { date, reason } = req.body;
+    if (!date) return res.status(400).json({ message: 'Date is required' });
+
+    let schedule = await DoctorSchedule.findOne({ doctor: req.params.doctorId });
+    if (!schedule) {
+      schedule = await DoctorSchedule.create({ doctor: req.params.doctorId });
+    }
+
+    const alreadyBlocked = schedule.blockedDates.some(b => 
+      new Date(b.date).getTime() === new Date(date).getTime()
+    );
+
+    if (alreadyBlocked) {
+      return res.status(400).json({ message: 'Date is already blocked' });
+    }
+
+    schedule.blockedDates.push({ date: new Date(date), reason });
+    await schedule.save();
+
+    res.json({ message: 'Date blocked successfully', schedule });
+  } catch (error) {
+    res.status(500).json({ message: 'Error blocking date', error: error.message });
   }
 });
 

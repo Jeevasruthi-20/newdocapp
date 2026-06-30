@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import {
   FiCalendar, FiFileText, FiBell, FiActivity, FiDownload,
-  FiHeart, FiUser, FiChevronRight,
+  FiHeart, FiUser, FiChevronRight, FiClock, FiAlertCircle, FiCheckCircle, FiRefreshCw,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { apiJson } from '../lib/api';
@@ -29,13 +30,42 @@ const PatientDashboard = () => {
   const { getDisplayName } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [delayActions, setDelayActions] = useState({}); // { [aptId]: 'loading' | 'accepted' | 'rescheduled' }
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     apiJson('/api/dashboard/patient')
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleAcceptDelay = async (aptId) => {
+    setDelayActions(prev => ({ ...prev, [aptId]: 'loading' }));
+    try {
+      await apiJson(`/api/appointments/${aptId}/accept-delay`, { method: 'PUT' });
+      toast.success('You have accepted the new appointment time!');
+      setDelayActions(prev => ({ ...prev, [aptId]: 'accepted' }));
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to accept delay. Please try again.');
+      setDelayActions(prev => ({ ...prev, [aptId]: null }));
+    }
+  };
+
+  const handleReschedule = async (aptId) => {
+    setDelayActions(prev => ({ ...prev, [aptId]: 'loading' }));
+    try {
+      await apiJson(`/api/appointments/${aptId}/reschedule-from-delay`, { method: 'PUT' });
+      toast.success('Reschedule request submitted! Our team will contact you.');
+      setDelayActions(prev => ({ ...prev, [aptId]: 'rescheduled' }));
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to submit request. Please try again.');
+      setDelayActions(prev => ({ ...prev, [aptId]: null }));
+    }
+  };
 
   if (loading) {
     return (
@@ -117,22 +147,97 @@ const PatientDashboard = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {upcomingAppointments.map((apt, i) => (
-                    <motion.div key={apt._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
-                      <Card className="flex items-center justify-between !p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-medical-100 flex items-center justify-center text-medical-600 font-bold">
-                            {(apt.doctor?.name || 'D')[0]}
+                  {upcomingAppointments.map((apt, i) => {
+                    const isDelayed = apt.delayMinutes > 0;
+                    const actionState = delayActions[apt._id];
+                    const isLoading = actionState === 'loading';
+                    return (
+                      <motion.div key={apt._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+                        <Card className="!p-0 overflow-hidden">
+                          {/* Delay Banner */}
+                          <AnimatePresence>
+                            {isDelayed && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="bg-amber-50 border-b border-amber-200 px-4 py-2"
+                              >
+                                <div className="flex items-start gap-2">
+                                  <FiAlertCircle className="text-amber-500 mt-0.5 shrink-0" />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-amber-800">
+                                      ⏰ Running {apt.delayMinutes >= 60
+                                        ? `${Math.floor(apt.delayMinutes / 60)}h ${apt.delayMinutes % 60 > 0 ? `${apt.delayMinutes % 60}m` : ''}`.trim()
+                                        : `${apt.delayMinutes} mins`} late
+                                    </p>
+                                    <p className="text-xs text-amber-700">
+                                      Dr. {apt.doctor?.name || 'Your doctor'} is running behind schedule.
+                                      {apt.expectedStartTime && (
+                                        <> Estimated consultation: <strong>{apt.expectedStartTime}</strong></>
+                                      )}
+                                    </p>
+                                    {/* Action buttons */}
+                                    {!apt.delayAccepted && actionState !== 'accepted' && actionState !== 'rescheduled' && (
+                                      <div className="flex gap-2 mt-2">
+                                        <button
+                                          onClick={() => handleAcceptDelay(apt._id)}
+                                          disabled={isLoading}
+                                          className="text-xs px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium disabled:opacity-50 flex items-center gap-1 transition-colors"
+                                        >
+                                          <FiCheckCircle size={11} /> Accept New Time
+                                        </button>
+                                        <button
+                                          onClick={() => handleReschedule(apt._id)}
+                                          disabled={isLoading}
+                                          className="text-xs px-3 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-full font-medium disabled:opacity-50 flex items-center gap-1 transition-colors"
+                                        >
+                                          <FiRefreshCw size={11} /> Reschedule
+                                        </button>
+                                      </div>
+                                    )}
+                                    {(apt.delayAccepted || actionState === 'accepted') && (
+                                      <p className="text-xs text-green-700 mt-1 font-medium">✅ You accepted the new time</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* Appointment Info */}
+                          <div className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-medical-100 flex items-center justify-center text-medical-600 font-bold">
+                                {(apt.doctor?.name || 'D')[0]}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-slate-800">{apt.doctor?.name || 'Doctor'}</p>
+                                <p className="text-sm text-slate-500 flex items-center gap-1">
+                                  <FiCalendar size={12} /> {formatDate(apt.date)}
+                                  <span className="mx-1">·</span>
+                                  <FiClock size={12} />
+                                  {isDelayed && apt.expectedStartTime
+                                    ? <><s className="text-slate-400">{apt.startTime}</s> → <strong className="text-amber-600">{apt.expectedStartTime}</strong></>
+                                    : apt.startTime
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${
+                                isDelayed
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-medical-50 text-medical-600'
+                              }`}>
+                                {isDelayed ? `🕐 ${apt.delayMinutes}m delay` : apt.status}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-slate-800">{apt.doctor?.name || 'Doctor'}</p>
-                            <p className="text-sm text-slate-500">{formatDate(apt.date)} · {apt.startTime}</p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-medical-50 text-medical-600 capitalize">{apt.status}</span>
-                      </Card>
-                    </motion.div>
-                  ))}
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </section>

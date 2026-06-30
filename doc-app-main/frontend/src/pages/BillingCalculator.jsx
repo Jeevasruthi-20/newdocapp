@@ -4,15 +4,15 @@ import "./BillingCalculator.css";
 
 // Minimal doctor list with numeric fees for calculation
 const DOCTORS = [
-  { id: 1, name: "Dr. Richard James", specialty: "General Physician", fee: 120 },
-  { id: 2, name: "Dr. Emily Larson", specialty: "Gynecologist", fee: 150 },
-  { id: 3, name: "Dr. Sarah Patel", specialty: "Dermatologist", fee: 130 },
-  { id: 4, name: "Dr. Michael Chen", specialty: "Cardiologist", fee: 180 },
-  { id: 5, name: "Dr. Lisa Rodriguez", specialty: "Pediatrician", fee: 100 },
+  { id: 1, name: "Dr. Richard James", specialty: "General Physician", fee: 500 },
+  { id: 2, name: "Dr. Emily Larson", specialty: "Gynecologist", fee: 800 },
+  { id: 3, name: "Dr. Sarah Patel", specialty: "Dermatologist", fee: 700 },
+  { id: 4, name: "Dr. Michael Chen", specialty: "Cardiologist", fee: 1000 },
+  { id: 5, name: "Dr. Lisa Rodriguez", specialty: "Pediatrician", fee: 600 },
 ];
 
 const currency = (n) =>
-  (isNaN(n) ? 0 : n).toLocaleString(undefined, { style: "currency", currency: "USD" });
+  (isNaN(n) ? 0 : n).toLocaleString("en-IN", { style: "currency", currency: "INR" });
 
 const BillingCalculator = () => {
   const { t } = useTranslation();

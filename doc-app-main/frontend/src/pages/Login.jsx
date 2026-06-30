@@ -89,6 +89,8 @@ const Login = () => {
       setSuccess("Logged in successfully!");
       if (user.role === 'admin') {
         navigate("/admin");
+      } else if (user.role === 'doctor') {
+        navigate("/doctor-dashboard");
       } else {
         navigate(redirectTo);
       }

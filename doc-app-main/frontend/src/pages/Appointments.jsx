@@ -292,9 +292,60 @@ const Appointments = () => {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                         <p className="apt-reason">{apt.reason}</p>
                         {apt.delayMinutes > 0 && (
-                          <div className="delay-badge">
-                            ⚠️ Doctor is running {apt.delayMinutes} mins late.
-                            Estimated time: {to12HourLocal(apt.expectedStartTime || apt.startTime)}
+                          <div style={{
+                            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                            border: '1px solid #fbbf24',
+                            borderRadius: '10px',
+                            padding: '10px 12px',
+                            marginTop: '8px',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                              <span style={{ fontSize: '16px' }}>⚠️</span>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ fontWeight: '700', color: '#92400e', fontSize: '13px', margin: '0 0 2px 0' }}>
+                                  Running {apt.delayMinutes >= 60
+                                    ? `${Math.floor(apt.delayMinutes / 60)}h ${apt.delayMinutes % 60 > 0 ? `${apt.delayMinutes % 60}m` : ''}`.trim()
+                                    : `${apt.delayMinutes} mins`} late
+                                </p>
+                                <p style={{ color: '#b45309', fontSize: '12px', margin: '0 0 8px 0' }}>
+                                  Dr. {apt.doctorName} is running behind schedule.
+                                  {apt.expectedStartTime && (
+                                    <> Estimated: <strong>{to12HourLocal(apt.expectedStartTime)}</strong></>
+                                  )}
+                                </p>
+                                {!apt.delayAccepted && apt.status !== 'rescheduled' && (
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await apiJson(`/api/appointments/${apt._id}/accept-delay`, { method: 'PUT' });
+                                          toast.success('You accepted the new appointment time!');
+                                          window.location.reload();
+                                        } catch { toast.error('Failed. Please try again.'); }
+                                      }}
+                                      style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                      ✓ Accept New Time
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await apiJson(`/api/appointments/${apt._id}/reschedule-from-delay`, { method: 'PUT' });
+                                          toast.success('Reschedule request submitted!');
+                                          window.location.reload();
+                                        } catch { toast.error('Failed. Please try again.'); }
+                                      }}
+                                      style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                      ↺ Reschedule
+                                    </button>
+                                  </div>
+                                )}
+                                {apt.delayAccepted && (
+                                  <p style={{ color: '#16a34a', fontSize: '12px', fontWeight: '600', margin: 0 }}>✅ You accepted the new time</p>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

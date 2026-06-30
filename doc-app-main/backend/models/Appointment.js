@@ -109,6 +109,10 @@ const appointmentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  delayAccepted: {
+    type: Boolean,
+    default: false
+  },
   
   // Medical Details
   diagnosis: [{

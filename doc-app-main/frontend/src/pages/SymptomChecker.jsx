@@ -29,7 +29,7 @@ const SYMPTOM_MAP = [
     tip: "Avoid scratching rashes to prevent infection.",
   },
   {
-    keywords: ["fever","cold","flu","cough","fatigue","tired","weakness","infection","sore throat","runny nose","body ache","loss of appetite","general","chills","sweats","viral","bacterial","malaise","mild pain","checkup"],
+    keywords: ["fever","cold","flu","cough","fatigue","tired","weakness","infection","sore throat","runny nose","body ache","loss of appetite","general","chills","sweats","viral","bacterial","malaise","mild pain","checkup","stuffy nose","sneezing","phlegm","head cold"],
     specialty: "General Physician",
     icon: "🏥",
     reason: "Your symptoms suggest a general illness that a GP can evaluate.",
@@ -101,7 +101,7 @@ const SYMPTOM_MAP = [
     tip: "Drink plenty of water and avoid holding urine for too long.",
   },
   {
-    keywords: ["period","periods","flow","menstruation","menstrual","pregnancy","pregnant","cramps","vaginal","pcos","bleeding","uterus","ovary","menopause","contraception","fertility","fibroid","endometriosis","discharge","pelvic pain","maternity"],
+    keywords: ["period","periods","flow","menstruation","menstrual","pregnancy","pregnant","cramps","vaginal","pcos","bleeding","uterus","ovary","menopause","contraception","fertility","fibroid","endometriosis","discharge","pelvic pain","maternity","periods flow is high","heavy flow","heavy period","irregular periods"],
     specialty: "Gynecologist",
     icon: "🚺",
     reason: "Your symptoms relate to women's reproductive health.",

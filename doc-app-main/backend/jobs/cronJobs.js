@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
-const { sendEmail } = require('../lib/emailService');
+const sendEmail = require('../utils/sendEmail');
 
 const initCronJobs = () => {
   // 1. Auto-cancel unconfirmed appointments after 24 hours

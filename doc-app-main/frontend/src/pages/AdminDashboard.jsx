@@ -23,6 +23,11 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({ totalPatients: 0, totalDoctors: 0, totalAppointments: 0, pendingAppointments: 0 });
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState("");
+  const [doctorSchedule, setDoctorSchedule] = useState(null);
+  const [blockDate, setBlockDate] = useState("");
+  const [blockReason, setBlockReason] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,15 +46,17 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsData, apptsData, patientsData] = await Promise.all([
+      const [statsData, apptsData, patientsData, doctorsData] = await Promise.all([
         apiJson(`${API_BASE_URL}/stats`).catch(() => null),
         apiJson(`${API_BASE_URL}/appointments`).catch(() => []),
         apiJson(`${API_BASE_URL}/patients`).catch(() => []),
+        apiJson(`${API_BASE_URL}/doctors`).catch(() => []),
       ]);
 
       if (statsData) setStats(statsData);
       if (apptsData) setAppointments(apptsData);
       if (patientsData) setPatients(patientsData);
+      if (doctorsData) setDoctors(doctorsData);
     } catch (error) {
       console.error("Dashboard fetch error:", error);
     } finally {
@@ -64,6 +71,34 @@ const AdminDashboard = () => {
       fetchData();
     }
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    if (selectedDoctor) {
+      apiJson(`${API_BASE_URL}/schedule/${selectedDoctor}`)
+        .then(data => setDoctorSchedule(data))
+        .catch(err => console.error(err));
+    } else {
+      setDoctorSchedule(null);
+    }
+  }, [selectedDoctor]);
+
+  const handleBlockDate = async () => {
+    if (!blockDate || !selectedDoctor) return;
+    try {
+      await apiJson(`${API_BASE_URL}/schedule/${selectedDoctor}/block-date`, {
+        method: "POST",
+        body: JSON.stringify({ date: blockDate, reason: blockReason })
+      });
+      alert("Date blocked successfully!");
+      setBlockDate("");
+      setBlockReason("");
+      const data = await apiJson(`${API_BASE_URL}/schedule/${selectedDoctor}`);
+      setDoctorSchedule(data);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Failed to block date.");
+    }
+  };
 
   const handleUpdateStatus = async (id, status) => {
     try {
@@ -192,6 +227,7 @@ const AdminDashboard = () => {
           <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}>📊 Overview</button>
           <button className={activeTab === "appointments" ? "active" : ""} onClick={() => setActiveTab("appointments")}>📅 Appointments</button>
           <button className={activeTab === "patients" ? "active" : ""} onClick={() => setActiveTab("patients")}>👥 Patients</button>
+          <button className={activeTab === "schedule" ? "active" : ""} onClick={() => setActiveTab("schedule")}>🗓️ Schedule</button>
           <button onClick={logout} className="admin-logout-btn">🚪 Logout</button>
         </nav>
       </div>
@@ -416,6 +452,49 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {activeTab === "schedule" && (
+              <div className="admin-card">
+                <div className="card-header">
+                  <h2>Doctor Schedule Management</h2>
+                </div>
+                <div style={{ padding: '1rem' }}>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Select Doctor:</label>
+                    <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)} style={{ padding: '0.5rem', width: '300px' }}>
+                      <option value="">-- Choose a Doctor --</option>
+                      {doctors.map(d => (
+                        <option key={d._id} value={d._id}>{d.name} ({d.email})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedDoctor && doctorSchedule && (
+                    <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <h3>Block a Date</h3>
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', alignItems: 'center' }}>
+                        <input type="date" value={blockDate} onChange={e => setBlockDate(e.target.value)} style={{ padding: '0.5rem' }} />
+                        <input type="text" placeholder="Reason (e.g. Vacation)" value={blockReason} onChange={e => setBlockReason(e.target.value)} style={{ padding: '0.5rem', flex: 1 }} />
+                        <button className="btn" onClick={handleBlockDate} style={{ background: '#3b82f6', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Block Date</button>
+                      </div>
+
+                      <h3 style={{ marginTop: '2rem' }}>Currently Blocked Dates</h3>
+                      {doctorSchedule.blockedDates && doctorSchedule.blockedDates.length > 0 ? (
+                        <ul style={{ marginTop: '1rem', paddingLeft: '1.5rem' }}>
+                          {doctorSchedule.blockedDates.map(b => (
+                            <li key={b._id || b.date} style={{ marginBottom: '0.5rem' }}>
+                              <strong>{new Date(b.date).toLocaleDateString()}</strong> {b.reason ? `- ${b.reason}` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p style={{ marginTop: '1rem', color: '#718096' }}>No blocked dates.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

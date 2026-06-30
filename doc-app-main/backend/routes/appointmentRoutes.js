@@ -52,10 +52,15 @@ const getOrCreateDemoDoctor = async () => {
   return doctor;
 };
 
-router.get('/user', async (req, res) => {
+router.get('/my', async (req, res) => {
   try {
-    const appointments = await Appointment.find({ patient: req.user._id })
+    const query = req.user.role === 'doctor' 
+      ? { doctor: req.user._id } 
+      : { patient: req.user._id };
+      
+    const appointments = await Appointment.find(query)
       .populate('doctor', 'name doctorProfile')
+      .populate('patient', 'name email dob phone')
       .sort({ date: -1 });
     res.json(appointments);
   } catch (error) {
@@ -115,29 +120,29 @@ router.post('/', async (req, res) => {
     const populated = await Appointment.findById(appointment._id)
       .populate('doctor', 'name doctorProfile');
 
-    // Send appointment confirmation email
-    const patient = await User.findById(req.user._id);
-    const doctorName = populated.doctor?.name || '';
-    const html = `
-      <h2>Appointment Confirmation</h2>
-      <p>Dear ${patient.name},</p>
-      <p>Your appointment with Dr. ${doctorName} is scheduled for <strong>${populated.date.toDateString()}</strong> at <strong>${populated.startTime}</strong>.</p>
-      <p>Appointment ID: ${populated._id}</p>
-      <p>Thank you for using MedConnect.</p>
-    `;
-    await sendEmail({
-      email: patient.email,
-      subject: 'MedConnect Appointment Confirmation',
-      message: html,
-    });
-    await EmailLog.create({
-      to: patient.email,
-      subject: 'MedConnect Appointment Confirmation',
-      html,
-      type: 'appointment_confirmation',
-      referenceId: populated._id,
-      status: 'sent',
-    });
+    // Send appointment confirmation email (non-blocking)
+    try {
+      const patient = await User.findById(req.user._id);
+      const doctorName = populated.doctor?.name || '';
+      const html = `
+        <h2>Appointment Confirmation</h2>
+        <p>Dear ${patient.name},</p>
+        <p>Your appointment with Dr. ${doctorName} is scheduled for <strong>${populated.date.toDateString()}</strong> at <strong>${populated.startTime}</strong>.</p>
+        <p>Appointment ID: ${populated._id}</p>
+        <p>Thank you for using MedConnect.</p>
+      `;
+      await sendEmail({ email: patient.email, subject: 'MedConnect Appointment Confirmation', message: html });
+      await EmailLog.create({
+        to: patient.email,
+        subject: 'MedConnect Appointment Confirmation',
+        html,
+        type: 'appointment_confirmation',
+        referenceId: populated._id,
+        status: 'sent',
+      });
+    } catch (emailErr) {
+      console.error('[Booking] Email/log error (non-fatal):', emailErr.message);
+    }
     res.status(201).json(populated);
   } catch (error) {
     console.error('Create appointment error:', error);
@@ -189,6 +194,69 @@ router.get('/available-slots', async (req, res) => {
       return res.status(400).json({ message: 'doctorId and date are required' });
     }
 
+    const queryDate = new Date(date);
+    queryDate.setHours(0, 0, 0, 0);
+
+    // 1. Check DoctorSchedule for blocked dates or non-working days
+    const DoctorSchedule = require('../models/DoctorSchedule');
+    const schedule = await DoctorSchedule.findOne({ doctor: doctorId });
+    
+    let allSlotsBlocked = false;
+    let blockedTimes = [];
+
+    if (schedule) {
+      // Check if entire date is blocked
+      const isBlockedDate = schedule.blockedDates.some(b => {
+        const bDate = new Date(b.date);
+        bDate.setHours(0, 0, 0, 0);
+        return bDate.getTime() === queryDate.getTime();
+      });
+
+      if (isBlockedDate) {
+        allSlotsBlocked = true;
+      } else {
+        // Check weekly hours
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = days[queryDate.getDay()];
+        if (schedule.weeklyHours && schedule.weeklyHours[dayName] && schedule.weeklyHours[dayName].isWorking === false) {
+          allSlotsBlocked = true;
+        }
+
+        // Check specific blocked time slots
+        const dailyBlocks = schedule.blockedTimeSlots.filter(b => {
+          const bDate = new Date(b.date);
+          bDate.setHours(0, 0, 0, 0);
+          return bDate.getTime() === queryDate.getTime();
+        });
+
+        dailyBlocks.forEach(block => {
+          // Add all 30m intervals between startTime and endTime to blockedTimes
+          // Assuming HH:MM format
+          let current = block.startTime;
+          while (current < block.endTime) {
+            blockedTimes.push(current);
+            // Add 30 mins
+            let [h, m] = current.split(':').map(Number);
+            m += 30;
+            if (m >= 60) {
+              h += 1;
+              m -= 60;
+            }
+            current = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          }
+        });
+      }
+    }
+
+    if (allSlotsBlocked) {
+      // Return all possible slots as taken
+      const allSlots = [
+        "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
+        "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
+      ];
+      return res.json(allSlots);
+    }
+
     const query = {
       doctor: doctorId,
       date: new Date(date),
@@ -199,7 +267,9 @@ router.get('/available-slots', async (req, res) => {
     }
 
     const booked = await Appointment.find(query).select('startTime');
-    const takenTimes = booked.map((a) => a.startTime);
+    let takenTimes = booked.map((a) => a.startTime);
+    takenTimes = [...new Set([...takenTimes, ...blockedTimes])];
+
     res.json(takenTimes);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching available slots', error: error.message });
@@ -475,6 +545,55 @@ router.put('/:id/check-in', async (req, res) => {
   }
 });
 
+/* ─── PUT /api/appointments/:id/accept-delay ────────────────────────────────
+   Patient accepts the new delayed time.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/accept-delay', async (req, res) => {
+  try {
+    const appointment = await Appointment.findOne({ _id: req.params.id, patient: req.user._id });
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+    appointment.delayAccepted = true;
+    await appointment.save();
+
+    res.json({ message: 'Delay accepted. See you at the updated time!', appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/reschedule-from-delay ───────────────────────
+   Patient requests to reschedule when doctor is running late.
+   Marks appointment as 'rescheduled' so admin can follow up.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/reschedule-from-delay', async (req, res) => {
+  try {
+    const appointment = await Appointment.findOne({ _id: req.params.id, patient: req.user._id })
+      .populate('doctor', 'name');
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+    appointment.status = 'rescheduled';
+    appointment.cancellationReason = 'Patient requested reschedule due to doctor delay';
+    await appointment.save();
+
+    // Notify patient
+    try {
+      const patient = await User.findById(req.user._id);
+      await sendEmail({
+        email: patient.email,
+        subject: 'MedConnect - Reschedule Requested',
+        message: `<h2>Reschedule Request Confirmed</h2><p>Dear ${patient.name}, your reschedule request for the appointment with Dr. ${appointment.doctor?.name} has been noted. Our team will contact you shortly to find a new time.</p>`,
+      });
+    } catch (emailErr) {
+      console.error('[Reschedule] Email error (non-fatal):', emailErr.message);
+    }
+
+    res.json({ message: 'Reschedule request submitted. Our team will contact you.', appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 /* ─── GET /api/appointments/queue/:doctorId ─────────────────────────────────
    Get live queue details for a specific doctor today.
 ─────────────────────────────────────────────────────────────────────────── */
@@ -569,6 +688,74 @@ router.delete('/schedule/block-date/:id', protect, async (req, res) => {
       await schedule.save();
     }
     res.json({ message: 'Block removed', schedule });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/confirm ─────────────────────────────────────
+   Doctor confirms the appointment.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/confirm', async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+    
+    // Authorization check: Only assigned doctor can confirm
+    if (appointment.doctor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to confirm this appointment' });
+    }
+
+    appointment.status = 'confirmed';
+    await appointment.save();
+
+    res.json({ message: 'Appointment confirmed successfully', appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/complete ────────────────────────────────────
+   Doctor completes the appointment.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/complete', async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+    
+    // Authorization check
+    if (appointment.doctor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to complete this appointment' });
+    }
+
+    appointment.status = 'completed';
+    appointment.payment.paymentStatus = 'paid'; // Automatically mark payment as paid upon completion
+    await appointment.save();
+
+    res.json({ message: 'Appointment marked as completed', appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ─── PUT /api/appointments/:id/cancel ──────────────────────────────────────
+   Doctor cancels the appointment.
+─────────────────────────────────────────────────────────────────────────── */
+router.put('/:id/cancel', async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+    
+    // Authorization check
+    if (appointment.doctor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to cancel this appointment' });
+    }
+
+    appointment.status = 'cancelled';
+    appointment.cancellationReason = 'Cancelled by doctor';
+    await appointment.save();
+
+    res.json({ message: 'Appointment cancelled successfully', appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,0 +1,283 @@
+/* ════════════════════════════════════════════════════════════════════
+   DOCTOR DASHBOARD — Premium UI
+   ════════════════════════════════════════════════════════════════════ */
+
+.doctor-dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e8f4f8 50%, #f0f4ff 100%);
+  padding: 2rem 1.5rem 4rem;
+}
+
+.doctor-dashboard .dashboard-header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+}
+
+.doctor-dashboard .dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #0891b2, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.25rem;
+}
+
+.doctor-dashboard .dashboard-header p {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* ── Stat Cards ── */
+.doctor-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+}
+
+.doctor-stat-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.doctor-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.doctor-stat-card .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.doctor-stat-card .stat-icon.blue   { background: #dbeafe; color: #2563eb; }
+.doctor-stat-card .stat-icon.green  { background: #d1fae5; color: #059669; }
+.doctor-stat-card .stat-icon.amber  { background: #fef3c7; color: #d97706; }
+.doctor-stat-card .stat-icon.purple { background: #ede9fe; color: #7c3aed; }
+
+.doctor-stat-card .stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.doctor-stat-card .stat-label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* ── Tab Bar ── */
+.doctor-tabs {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0;
+}
+
+.doctor-tab {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.doctor-tab:hover { color: #475569; }
+.doctor-tab.active {
+  color: #0891b2;
+  border-bottom-color: #0891b2;
+}
+
+/* ── Content Section ── */
+.doctor-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.doctor-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+/* ── Appointment List ── */
+.doctor-apt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.doctor-apt-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
+}
+
+.doctor-apt-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.doctor-apt-card .apt-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.doctor-apt-card .apt-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0891b2, #6366f1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.doctor-apt-card .apt-details h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 2px;
+}
+
+.doctor-apt-card .apt-details p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.doctor-apt-card .apt-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.doctor-apt-card .apt-time {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+}
+
+.doctor-apt-card .apt-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: capitalize;
+}
+
+.apt-status.scheduled  { background: #dbeafe; color: #2563eb; }
+.apt-status.confirmed  { background: #d1fae5; color: #059669; }
+.apt-status.completed  { background: #e2e8f0; color: #475569; }
+.apt-status.cancelled  { background: #fee2e2; color: #dc2626; }
+.apt-status.in-progress { background: #fef3c7; color: #d97706; }
+
+/* ── Action Buttons ── */
+.doctor-btn {
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doctor-btn.confirm  { background: #d1fae5; color: #059669; }
+.doctor-btn.confirm:hover { background: #059669; color: #fff; }
+.doctor-btn.complete { background: #dbeafe; color: #2563eb; }
+.doctor-btn.complete:hover { background: #2563eb; color: #fff; }
+.doctor-btn.cancel   { background: #fee2e2; color: #dc2626; }
+.doctor-btn.cancel:hover { background: #dc2626; color: #fff; }
+.doctor-btn.delay    { background: #fef3c7; color: #d97706; }
+.doctor-btn.delay:hover { background: #d97706; color: #fff; }
+
+.doctor-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Delay Input ── */
+.delay-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fffbeb;
+  border-radius: 10px;
+  border: 1px solid #fde68a;
+}
+
+.delay-input-row input {
+  width: 80px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.delay-input-row label {
+  font-size: 0.8rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+/* ── Empty State ── */
+.doctor-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #94a3b8;
+}
+
+.doctor-empty .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.doctor-empty p {
+  font-size: 0.95rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .doctor-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .doctor-apt-card { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .doctor-apt-card .apt-actions { width: 100%; justify-content: flex-end; }
+}

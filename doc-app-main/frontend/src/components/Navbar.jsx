@@ -104,7 +104,11 @@ const Navbar = () => {
                         exit={{ opacity: 0, y: -8 }}
                         className="user-menu active"
                       >
-                        <Link to="/dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.dashboard')}</Link>
+                        {currentUser?.role === 'doctor' ? (
+                          <Link to="/doctor-dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>👨‍⚕️ Doctor Dashboard</Link>
+                        ) : (
+                          <Link to="/dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.dashboard')}</Link>
+                        )}
                         <Link to="/appointments" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.appointments')}</Link>
                         <Link to="/health-timeline" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>📊 Health Timeline</Link>
                         <Link to="/profile" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.profile')}</Link>

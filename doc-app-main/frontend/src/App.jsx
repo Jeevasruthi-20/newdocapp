@@ -21,6 +21,7 @@ import ResetPassword from './pages/ResetPassword';
 import BillingCalculator from './pages/BillingCalculator';
 import SymptomChecker from './pages/SymptomChecker';
 import HealthTimeline from './pages/HealthTimeline';
+import DoctorDashboard from './pages/DoctorDashboard';
 import PrivateRoute from './components/PrivateRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/billing" element={<BillingCalculator />} />
                 <Route path="/health-timeline" element={<HealthTimeline />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
