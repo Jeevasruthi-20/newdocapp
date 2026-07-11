@@ -42,6 +42,11 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['in-person', 'video'],
     default: 'in-person'
   },
+  consultationType: {
+    type: String,
+    enum: ['online', 'offline'],
+    default: 'offline'
+  },
   appointmentType: {
     type: String,
     enum: ['consultation', 'follow-up', 'check-up', 'procedure', 'test', 'other'],
@@ -85,8 +90,8 @@ const appointmentSchema = new mongoose.Schema({
   // Status and Tracking
   status: {
     type: String,
-    enum: ['scheduled', 'confirmed', 'completed', 'cancelled', 'rescheduled', 'in-progress'],
-    default: 'scheduled'
+    enum: ['pending', 'scheduled', 'confirmed', 'completed', 'cancelled', 'rescheduled', 'in-progress', 'delayed'],
+    default: 'pending'
   },
   
   // Automations

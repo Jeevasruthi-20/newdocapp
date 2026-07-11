@@ -118,25 +118,23 @@ const DoctorDashboard = () => {
   const todayApts = appointments.filter(a => {
     const d = new Date(a.date);
     d.setHours(0, 0, 0, 0);
-    return d.getTime() === today.getTime() && !['cancelled', 'completed'].includes(a.status);
+    return d.getTime() === today.getTime();
   });
 
-  const upcomingApts = appointments.filter(a => {
-    const d = new Date(a.date);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime() > today.getTime() && !['cancelled', 'completed'].includes(a.status);
-  });
+  const pendingApts = appointments.filter(a => a.status === 'pending');
+  const confirmedApts = appointments.filter(a => ['confirmed', 'delayed', 'in-progress'].includes(a.status));
+  const completedApts = appointments.filter(a => a.status === 'completed');
 
-  const pastApts = appointments.filter(a =>
-    ['completed', 'cancelled'].includes(a.status)
-  ).slice(0, 10);
-
-  const displayApts = activeTab === 'today' ? todayApts : activeTab === 'upcoming' ? upcomingApts : pastApts;
+  const displayApts = activeTab === 'today' ? todayApts 
+                    : activeTab === 'pending' ? pendingApts 
+                    : activeTab === 'confirmed' ? confirmedApts 
+                    : completedApts;
 
   // Stats
   const totalToday = todayApts.length;
-  const totalUpcoming = upcomingApts.length;
-  const totalCompleted = appointments.filter(a => a.status === 'completed').length;
+  const totalPending = pendingApts.length;
+  const totalConfirmed = confirmedApts.length;
+  const totalCompleted = completedApts.length;
   const totalPatients = new Set(appointments.map(a => a.patient?._id || a.patient).filter(Boolean)).size;
 
   if (loading) {
@@ -165,21 +163,28 @@ const DoctorDashboard = () => {
           </div>
         </motion.div>
         <motion.div className="doctor-stat-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <div className="stat-icon green">📅</div>
+          <div className="stat-icon amber">⏳</div>
           <div>
-            <div className="stat-value">{totalUpcoming}</div>
-            <div className="stat-label">Upcoming</div>
+            <div className="stat-value">{totalPending}</div>
+            <div className="stat-label">Pending</div>
           </div>
         </motion.div>
         <motion.div className="doctor-stat-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-icon amber">✅</div>
+          <div className="stat-icon green">📅</div>
+          <div>
+            <div className="stat-value">{totalConfirmed}</div>
+            <div className="stat-label">Confirmed</div>
+          </div>
+        </motion.div>
+        <motion.div className="doctor-stat-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <div className="stat-icon purple">✅</div>
           <div>
             <div className="stat-value">{totalCompleted}</div>
             <div className="stat-label">Completed</div>
           </div>
         </motion.div>
-        <motion.div className="doctor-stat-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <div className="stat-icon purple">👥</div>
+        <motion.div className="doctor-stat-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="stat-icon green">👥</div>
           <div>
             <div className="stat-value">{totalPatients}</div>
             <div className="stat-label">Total Patients</div>
@@ -191,8 +196,9 @@ const DoctorDashboard = () => {
       <div className="doctor-tabs">
         {[
           { key: 'today', label: `Today (${totalToday})` },
-          { key: 'upcoming', label: `Upcoming (${totalUpcoming})` },
-          { key: 'past', label: 'Past' },
+          { key: 'pending', label: `Pending (${totalPending})` },
+          { key: 'confirmed', label: `Confirmed (${totalConfirmed})` },
+          { key: 'completed', label: `Completed (${totalCompleted})` },
         ].map(tab => (
           <button
             key={tab.key}
@@ -216,7 +222,7 @@ const DoctorDashboard = () => {
             <AnimatePresence>
               {displayApts.map((apt, i) => {
                 const patientName = apt.patient?.name || 'Patient';
-                const isActive = ['scheduled', 'confirmed', 'in-progress'].includes(apt.status);
+                const isActive = ['pending', 'scheduled', 'confirmed', 'in-progress', 'delayed'].includes(apt.status);
                 return (
                   <motion.div
                     key={apt._id}
@@ -243,16 +249,31 @@ const DoctorDashboard = () => {
                       <span className={`apt-status ${apt.status}`}>{apt.status}</span>
 
                       {/* Action buttons for active appointments */}
-                      {apt.status === 'scheduled' && (
+                      
+                      {['pending', 'scheduled'].includes(apt.status) && (
                         <button className="doctor-btn confirm" onClick={() => handleConfirm(apt._id)}>
-                          ✓ Confirm
+                          ✅ Confirm
                         </button>
                       )}
-                      {['confirmed', 'in-progress'].includes(apt.status) && (
+
+                      {apt.type === 'video' && apt.meetLink && ['confirmed', 'delayed', 'in-progress'].includes(apt.status) && (
+                        <a href={apt.meetLink} target="_blank" rel="noreferrer" className="doctor-btn complete" style={{ textDecoration: 'none' }}>
+                          📹 Join Call
+                        </a>
+                      )}
+
+                      {['confirmed', 'delayed', 'in-progress'].includes(apt.status) && (
                         <button className="doctor-btn complete" onClick={() => handleComplete(apt._id)}>
                           ✅ Complete
                         </button>
                       )}
+
+                      {['confirmed', 'completed', 'in-progress', 'delayed'].includes(apt.status) && (
+                        <button className="doctor-btn confirm" onClick={() => navigate(`/admin/prescription/${apt._id}`)}>
+                          💊 Write Prescription
+                        </button>
+                      )}
+
                       {isActive && (
                         <>
                           <button
@@ -262,7 +283,7 @@ const DoctorDashboard = () => {
                             ⏰ Delay
                           </button>
                           <button className="doctor-btn cancel" onClick={() => handleCancel(apt._id)}>
-                            ✕
+                            ❌ Cancel
                           </button>
                         </>
                       )}

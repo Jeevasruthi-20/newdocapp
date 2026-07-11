@@ -104,16 +104,13 @@ const Navbar = () => {
                         exit={{ opacity: 0, y: -8 }}
                         className="user-menu active"
                       >
-                        {currentUser?.role === 'doctor' ? (
-                          <Link to="/doctor-dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>👨‍⚕️ Doctor Dashboard</Link>
-                        ) : (
-                          <Link to="/dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.dashboard')}</Link>
-                        )}
+                        <Link to="/dashboard" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.dashboard')}</Link>
                         <Link to="/appointments" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.appointments')}</Link>
                         <Link to="/health-timeline" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>📊 Health Timeline</Link>
                         <Link to="/profile" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.profile')}</Link>
                         <Link to="/prescriptions" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('prescription.title')}</Link>
                         <Link to="/billing" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.billing')}</Link>
+                        <Link to="/notifications" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>🔔 Notifications</Link>
                         {currentUser?.role === 'admin' && (
                           <Link to="/admin" className="menu-link" onClick={() => setIsUserMenuOpen(false)}>{t('nav.admin')}</Link>
                         )}

@@ -1,12 +1,12 @@
 const express = require('express');
-const EmailLog = require('../models/EmailLog');
-const sendEmail = require('../utils/sendEmail');
-const mongoose = require('mongoose');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
-const DoctorSchedule = require('../models/DoctorSchedule');
+const EmailLog = require('../models/EmailLog');
+const Notification = require('../models/Notification');
 const { protect } = require('../middleware/authMiddleware');
+const sendEmail = require('../utils/sendEmail');
 
 router.use(protect);
 
@@ -87,13 +87,24 @@ router.post('/', async (req, res) => {
       end = `${String(Math.floor(endMins / 60) % 24).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
     }
 
-    let resolvedDoctorId = doctorId;
-    if (doctorId && !mongoose.Types.ObjectId.isValid(doctorId)) {
-      resolvedDoctorId = null;
+    if (!doctorId || !mongoose.Types.ObjectId.isValid(doctorId)) {
+      return res.status(400).json({ message: 'A valid doctor must be selected' });
     }
-    if (!resolvedDoctorId) {
-      const doctor = await getOrCreateDemoDoctor();
-      resolvedDoctorId = doctor._id;
+    const resolvedDoctorId = doctorId;
+
+    const DoctorSchedule = require('../models/DoctorSchedule');
+    const schedule = await DoctorSchedule.findOne({ doctor: resolvedDoctorId });
+    if (schedule && schedule.blockedDates) {
+      const requestedDate = new Date(date);
+      requestedDate.setHours(0, 0, 0, 0);
+      const isBlocked = schedule.blockedDates.some(b => {
+        const bDate = new Date(b.date);
+        bDate.setHours(0, 0, 0, 0);
+        return bDate.getTime() === requestedDate.getTime();
+      });
+      if (isBlocked) {
+        return res.status(400).json({ message: 'This doctor is unavailable on the selected date. Please choose another date.' });
+      }
     }
 
     const count = await Appointment.countDocuments();
@@ -112,7 +123,7 @@ router.post('/', async (req, res) => {
       appointmentType: appointmentType || 'consultation',
       type: type || 'in-person',
       meetLink,
-      status: 'scheduled',
+      status: 'pending',
       payment: { consultationFee: 500, paymentStatus: 'pending' },
       createdBy: req.user._id,
     });
@@ -139,6 +150,13 @@ router.post('/', async (req, res) => {
         type: 'appointment_confirmation',
         referenceId: populated._id,
         status: 'sent',
+      });
+      
+      // Notify Doctor
+      await Notification.create({
+        receiverId: resolvedDoctorId,
+        receiverRole: 'doctor',
+        message: `New appointment booked by ${patient.name} for ${populated.date.toDateString()} at ${populated.startTime}`
       });
     } catch (emailErr) {
       console.error('[Booking] Email/log error (non-fatal):', emailErr.message);
@@ -482,8 +500,16 @@ router.put('/doctor-delay', async (req, res) => {
       const expectedM = totalMins % 60;
       apt.expectedStartTime = `${String(expectedH).padStart(2, '0')}:${String(expectedM).padStart(2, '0')}`;
       
+      apt.status = 'delayed';
       await apt.save();
       updatedAppointments.push(apt);
+
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        receiverId: apt.patient,
+        receiverRole: 'patient',
+        message: `Your appointment with Dr. ${req.user.name} is delayed by ${delayMinutes} minutes.`
+      });
 
       // Email Patient
       if (apt.patient) {
@@ -709,6 +735,13 @@ router.put('/:id/confirm', async (req, res) => {
     appointment.status = 'confirmed';
     await appointment.save();
 
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      receiverId: appointment.patient,
+      receiverRole: 'patient',
+      message: `Your appointment with Dr. ${req.user.name} on ${new Date(appointment.date).toDateString()} has been confirmed.`
+    });
+
     res.json({ message: 'Appointment confirmed successfully', appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -754,6 +787,13 @@ router.put('/:id/cancel', async (req, res) => {
     appointment.status = 'cancelled';
     appointment.cancellationReason = 'Cancelled by doctor';
     await appointment.save();
+
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      receiverId: appointment.patient,
+      receiverRole: 'patient',
+      message: `Your appointment with Dr. ${req.user.name} on ${new Date(appointment.date).toDateString()} was cancelled.`
+    });
 
     res.json({ message: 'Appointment cancelled successfully', appointment });
   } catch (error) {

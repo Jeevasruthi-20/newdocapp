@@ -12,7 +12,7 @@ const Prescriptions = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiJson('/api/prescriptions')
+    apiJson('/api/prescriptions/my')
       .then(setPrescriptions)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -58,29 +58,34 @@ const Prescriptions = () => {
                 <Card className="!p-0 overflow-hidden">
                   <div className="bg-medical-gradient px-6 py-4 text-white flex justify-between items-start">
                     <div>
-                      <p className="font-bold text-lg">Dr. {rx.doctorName}</p>
-                      <p className="text-sm text-medical-100">{rx.hospitalName}</p>
+                      <p className="font-bold text-lg">Dr. {rx.doctor?.name || 'Doctor'}</p>
+                      <p className="text-sm text-medical-100">{rx.doctor?.doctorProfile?.hospitalAffiliation?.name || 'MedConnect Hospital'}</p>
                     </div>
                     <FiShield className="text-2xl opacity-80" />
                   </div>
                   <div className="p-6">
                     <div className="flex flex-wrap gap-4 text-sm text-slate-500 mb-4">
-                      <span>ID: <strong className="text-medical-600">{rx.verificationId}</strong></span>
-                      <span>{formatDate(rx.consultationDate)}</span>
-                      <span>{rx.medicines?.length || 0} medicines</span>
+                      <span>ID: <strong className="text-medical-600">{rx._id.substring(0, 8)}</strong></span>
+                      <span>{formatDate(rx.date)}</span>
+                      <span>{rx.medications?.length || 0} medicines</span>
                     </div>
                     <ul className="space-y-2 mb-4">
-                      {rx.medicines?.map((m, idx) => (
-                        <li key={idx} className="text-sm text-slate-700 flex gap-2">
-                          <span className="font-semibold text-medical-600">{idx + 1}.</span>
-                          <span><strong>{m.name}</strong> — {m.dosage} {m.frequency && `· ${m.frequency}`}</span>
+                      {rx.medications?.map((m, idx) => (
+                        <li key={idx} className="text-sm text-slate-700 flex flex-col gap-1 border-b border-slate-100 pb-2 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-medical-600">{idx + 1}.</span>
+                            <span><strong>{m.name}</strong> — {m.dosage}</span>
+                          </div>
+                          <div className="pl-6 text-slate-500 text-xs">
+                            {m.frequency} {m.duration && `for ${m.duration}`} {m.instructions && `· ${m.instructions}`}
+                          </div>
                         </li>
                       ))}
                     </ul>
-                    {rx.diagnosis && <p className="text-sm text-slate-500 mb-4"><strong>Diagnosis:</strong> {rx.diagnosis}</p>}
+                    {rx.notes && <p className="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded border border-slate-200"><strong>Notes:</strong> {rx.notes}</p>}
                     <button
                       type="button"
-                      onClick={() => downloadPdf(rx._id, rx.verificationId)}
+                      onClick={() => downloadPdf(rx._id, rx._id.substring(0, 8))}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-medical bg-medical-600 text-white text-sm font-semibold hover:bg-medical-700 transition-colors"
                     >
                       <FiDownload /> {t('prescription.downloadPdf')}

@@ -12,6 +12,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const initCronJobs = require('./jobs/cronJobs');
 const Prescription = require("./models/Prescription");
@@ -93,6 +94,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/appointments", appointmentRoutes);
 require('./schedule/appointmentReminders');
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 // Public prescription verification
