@@ -111,6 +111,34 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.post("/social-login", async (req, res) => {
+  try {
+    const { email, name, uid, provider } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: "Email is required from social provider" });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({
+        email,
+        name: name || email.split("@")[0],
+        provider: provider || "google",
+        password: await bcrypt.hash(uid + Date.now().toString(), 10), // Random placeholder password
+        isEmailVerified: true
+      });
+      await user.save();
+    }
+
+    await issueTokens(user, res);
+  } catch (err) {
+    console.error("Social login error:", err);
+    res.status(500).json({ message: "Social login failed" });
+  }
+});
+
 router.post("/refresh", async (req, res) => {
   try {
     const { refreshToken } = req.body;

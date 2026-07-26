@@ -56,6 +56,13 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
+  const socialLogin = async (userData) => {
+    const data = await apiAuthPost('/api/auth/social-login', userData);
+    setTokens(data.accessToken, data.refreshToken);
+    setCurrentUser(data.user);
+    return data.user;
+  };
+
   const logout = async () => {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
@@ -101,6 +108,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     signup,
+    socialLogin,
     logout,
     updateUserProfile,
     refreshUser,

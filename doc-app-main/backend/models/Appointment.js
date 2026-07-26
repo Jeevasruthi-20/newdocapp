@@ -94,6 +94,11 @@ const appointmentSchema = new mongoose.Schema({
     default: 'pending'
   },
   
+  isReviewed: {
+    type: Boolean,
+    default: false
+  },
+  
   // Automations
   /** @deprecated Use reminder24hSent and reminder1hSent instead */
   reminderSent: { type: Boolean, default: false },
