@@ -68,6 +68,66 @@ const initCronJobs = () => {
     }
   });
 
+  // 3. Daily slot generation (runs at 1 AM every day)
+  cron.schedule('0 1 * * *', async () => {
+    try {
+      const DoctorSchedule = require('../models/DoctorSchedule');
+      const Slot = require('../models/Slot');
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + 30); // Generate for "today + 30"
+      
+      const schedules = await DoctorSchedule.find({}).populate('doctor');
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
+      for (const schedule of schedules) {
+        if (schedule.doctor && schedule.doctor.isActive === false) continue;
+        
+        // Skip blocked dates
+        const isBlocked = schedule.blockedDates.some(b => {
+          const bDate = new Date(b.date);
+          bDate.setHours(0,0,0,0);
+          return bDate.getTime() === targetDate.getTime();
+        });
+        if (isBlocked) continue;
+
+        const dayName = days[targetDate.getDay()];
+        const dayHours = schedule.weeklyHours && schedule.weeklyHours[dayName];
+        if (!dayHours || !dayHours.isWorking || !dayHours.start || !dayHours.end) continue;
+
+        let [h, m] = dayHours.start.split(':').map(Number);
+        let endMins = dayHours.end.split(':');
+        const endTotalMins = Number(endMins[0]) * 60 + Number(endMins[1]);
+        const duration = schedule.slotDuration || 20;
+        const buffer = schedule.bufferTime || 5;
+
+        while (h * 60 + m + duration <= endTotalMins) {
+          const startTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          const slotEndMins = h * 60 + m + duration;
+          const endTimeStr = `${String(Math.floor(slotEndMins / 60)).padStart(2, '0')}:${String(slotEndMins % 60).padStart(2, '0')}`;
+
+          await Slot.findOneAndUpdate(
+            { doctor: schedule.doctor, date: targetDate, startTime: startTimeStr },
+            {
+              $setOnInsert: { endTime: endTimeStr, isBooked: false, appointment: null }
+            },
+            { upsert: true, new: true }
+          );
+
+          // Increment for next slot
+          const nextTotal = slotEndMins + buffer;
+          h = Math.floor(nextTotal / 60);
+          m = nextTotal % 60;
+        }
+      }
+      console.log(`[Cron] Generated slots for ${targetDate.toDateString()}`);
+    } catch (error) {
+      console.error('[Cron Error] Slot generation:', error);
+    }
+  });
+
   console.log('[Cron] Background jobs initialized');
 };
 

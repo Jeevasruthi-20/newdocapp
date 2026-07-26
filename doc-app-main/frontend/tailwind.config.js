@@ -31,7 +31,7 @@ module.exports = {
         'medical-glow': '0 0 0 3px rgba(0, 105, 192, 0.15)',
       },
       backgroundImage: {
-        'medical-gradient': 'linear-gradient(135deg, #0069c0 0%, #00aaff 100%)',
+        'medical-gradient': 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0069c0 100%)',
       },
     },
   },

@@ -24,7 +24,7 @@ export const AppointmentsProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const data = await apiJson('/api/appointments/user');
+      const data = await apiJson('/api/appointments/my');
       // Normalize incoming data
       const normalizedData = Array.isArray(data) ? data.map(normalizeAppointment) : [];
       // Apply persisted overrides from localStorage (in case of page refresh)

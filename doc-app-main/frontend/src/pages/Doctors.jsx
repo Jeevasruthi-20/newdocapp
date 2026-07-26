@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAppointments } from "../context/AppointmentsContext";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-hot-toast";
+import { apiJson } from "../lib/api";
 import "./Doctors.css";
 import doctor1 from "../assets/doctors/doctor1.jpeg";
 import doctor2 from "../assets/doctors/doctor2.jpeg";
@@ -31,12 +32,6 @@ const doctors = [
   { id: 15, name: "Dr. Priya Mehra", specialty: "ENT Specialist", experience: "9+ years", rating: 4.5, reviews: 112, available: true, img: doctor8, location: "Ear, Nose & Throat Clinic", languages: ["English", "Hindi"], consultationFee: "₹800" },
 ];
 
-const timeSlots = [
-  "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
-  "11:00 AM", "11:30 AM", "01:00 PM", "01:30 PM",
-  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"
-];
-
 const to24Hour = (time12) => {
   const match = time12.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (!match) return time12;
@@ -57,6 +52,9 @@ const addMinutes = (time24, mins) => {
 const Doctors = () => {
   const { t } = useTranslation();
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
+  const [availableSlots, setAvailableSlots] = useState([]);
+
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("rating");
   
@@ -72,6 +70,32 @@ const Doctors = () => {
     reason: ""
   });
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(true);
+  const [realDoctors, setRealDoctors] = useState([]);
+
+  useEffect(() => {
+    if (showBookingModal && bookingData.date && selectedDoctor) {
+      apiJson(`/api/appointments/available-slots?doctorId=${selectedDoctor.id}&date=${bookingData.date}`)
+        .then(data => setAvailableSlots(data))
+        .catch(err => {
+          console.error(err);
+          toast.error("Failed to load time slots");
+        });
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [bookingData.date, selectedDoctor, showBookingModal]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const data = await apiJson("/api/doctors");
+        setRealDoctors(data || []);
+      } catch (error) {
+        console.error("Failed to fetch doctors:", error);
+      }
+    };
+    fetchDoctors();
+  }, []);
 
   const { addAppointment } = useAppointments();
   const { isAuthenticated } = useAuth();
@@ -104,7 +128,16 @@ const Doctors = () => {
     }
   };
 
-  const filteredDoctors = doctors
+  const combinedDoctors = doctors.map(staticDoc => {
+    const realMatch = realDoctors.find(rd => rd.name === staticDoc.name) || realDoctors[0];
+    return {
+      ...staticDoc,
+      id: realMatch ? realMatch._id : staticDoc.id,
+      realName: realMatch ? realMatch.name : staticDoc.name
+    };
+  });
+
+  const filteredDoctors = combinedDoctors
     .filter(doctor => {
       if (selectedSpecialty === "all") return true;
       if (selectedSpecialty === "Others") {
@@ -112,24 +145,33 @@ const Doctors = () => {
       }
       return doctor.specialty === selectedSpecialty;
     })
-    .filter(doctor =>
-      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(doctor => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        doctor.name.toLowerCase().includes(search) ||
+        doctor.specialty.toLowerCase().includes(search) ||
+        doctor.location.toLowerCase().includes(search) ||
+        doctor.languages.some(lang => lang.toLowerCase().includes(search))
+      );
+    })
     .sort((a, b) => {
-      switch (sortBy) {
-        case "rating": return b.rating - a.rating;
-        case "experience": return parseInt(b.experience) - parseInt(a.experience);
-        case "name": return a.name.localeCompare(b.name);
-        default: return 0;
-      }
+      if (sortBy === "rating") return b.rating - a.rating;
+      if (sortBy === "experience") return parseInt(b.experience) - parseInt(a.experience);
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      return 0;
     });
 
   const handleOpenBookingModal = (doctor) => {
+    if (!doctor.id || String(doctor.id).length < 24) {
+       toast.error("No real doctor mapped. Please seed the database first.");
+       return;
+    }
     setSelectedDoctor(doctor);
     setBookingData({
       date: "",
       time: "",
+      slotId: "",
       type: "in-person",
       reason: ""
     });
@@ -165,10 +207,10 @@ const Doctors = () => {
     }
 
     setIsSubmitting(true);
-    const startTime = to24Hour(bookingData.time);
+    const startTime = bookingData.time.includes('AM') || bookingData.time.includes('PM') ? to24Hour(bookingData.time) : bookingData.time;
 
     try {
-      const doctorId = String(selectedDoctor.id);
+      const doctorId = selectedDoctor.id; // Now this is a valid MongoDB ObjectId
 
       await addAppointment({
         doctorId,
@@ -178,6 +220,7 @@ const Doctors = () => {
         endTime: addMinutes(startTime, 30),
         reason: bookingData.reason.trim(),
         appointmentType: 'consultation',
+        slotId: bookingData.slotId
       });
       setShowBookingModal(false);
       toast.success("Appointment booked successfully!");
@@ -397,13 +440,16 @@ const Doctors = () => {
                 <div className="form-group mt-4">
                   <label>{t('doctors.selectTimeSlot')}</label>
                   <div className="time-slots-grid">
-                    {timeSlots.map(time => (
+                    {availableSlots.length === 0 && bookingData.date ? (
+                      <p style={{ gridColumn: '1 / -1', color: 'gray' }}>No available slots for this date.</p>
+                    ) : null}
+                    {availableSlots.map(slot => (
                       <div 
-                        key={time}
-                        className={`time-chip ${bookingData.time === time ? 'selected' : ''}`}
-                        onClick={() => setBookingData({...bookingData, time})}
+                        key={slot._id}
+                        className={`time-chip ${bookingData.slotId === slot._id ? 'selected' : ''}`}
+                        onClick={() => setBookingData({...bookingData, time: slot.startTime, slotId: slot._id})}
                       >
-                        {time}
+                        {slot.startTime}
                       </div>
                     ))}
                   </div>

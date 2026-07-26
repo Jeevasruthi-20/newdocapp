@@ -38,10 +38,10 @@ const HealthyBlog = () => {
       {/* Hero */}
       <section className="bg-medical-gradient text-white py-16 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl sm:text-4xl font-bold mb-3">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl sm:text-4xl font-bold mb-3 text-white">
             {t('blog.title')}
           </motion.h1>
-          <p className="text-medical-100 max-w-xl mx-auto">{t('blog.subtitle')}</p>
+          <p className="text-white/90 max-w-xl mx-auto">{t('blog.subtitle')}</p>
           <div className="mt-8 max-w-lg mx-auto relative">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input

@@ -63,8 +63,8 @@ const About = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
             <span className="inline-block px-4 py-1 rounded-full bg-white/20 text-sm font-medium mb-6">About MedConnect</span>
-            <h1 className="text-3xl sm:text-5xl font-bold mb-4 leading-tight">{t('about.heroTitle')}</h1>
-            <p className="text-lg text-medical-100 max-w-2xl mx-auto mb-8">{t('about.heroSubtitle')}</p>
+            <h1 className="text-3xl sm:text-5xl font-bold mb-4 leading-tight text-white">{t('about.heroTitle')}</h1>
+            <p className="text-lg text-white/90 max-w-2xl mx-auto mb-8">{t('about.heroSubtitle')}</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link to="/signup"><Button className="!bg-white !text-medical-600">{t('about.getStarted')}</Button></Link>
               <Link to="/doctors"><Button variant="secondary" className="!border-white/50 !text-white hover:!bg-white/10">{t('about.findDoctor')}</Button></Link>

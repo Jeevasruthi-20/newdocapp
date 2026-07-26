@@ -11,7 +11,8 @@
   align-items: stretch;
   padding: 3.5rem;
   border-radius: 32px;
-  background: linear-gradient(135deg, rgba(0,105,192,0.16), rgba(0,170,255,0.14));
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0069c0 100%);
+  color: #ffffff;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.85);
   box-shadow: 0 30px 70px rgba(0, 105, 192, 0.08);
@@ -39,10 +40,11 @@
   font-size: clamp(2.8rem, 4vw, 4rem);
   line-height: 1.05;
   max-width: 720px;
+  color: #ffffff;
 }
 
 .blog-hero p {
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.85);
   max-width: 620px;
 }
 

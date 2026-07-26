@@ -25,7 +25,9 @@ const DoctorScheduleSchema = new mongoose.Schema({
     friday: { start: String, end: String, isWorking: { type: Boolean, default: true } },
     saturday: { start: String, end: String, isWorking: { type: Boolean, default: false } },
     sunday: { start: String, end: String, isWorking: { type: Boolean, default: false } }
-  }
+  },
+  slotDuration: { type: Number, default: 20 },
+  bufferTime: { type: Number, default: 5 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('DoctorSchedule', DoctorScheduleSchema);

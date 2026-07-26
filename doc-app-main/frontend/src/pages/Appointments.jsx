@@ -13,13 +13,6 @@ import RescheduleModal from "../components/RescheduleModal";
 import { apiJson } from "../lib/api";
 import "./Appointments.css";
 
-const mockDoctors = [
-  { id: "d1", name: "Dr. Sarah Smith", specialty: "Cardiologist", avatar: "https://ui-avatars.com/api/?name=Sarah+Smith&background=0D8ABC&color=fff" },
-  { id: "d2", name: "Dr. Michael Chen", specialty: "Neurologist", avatar: "https://ui-avatars.com/api/?name=Michael+Chen&background=22C55E&color=fff" },
-  { id: "d3", name: "Dr. Emily Davis", specialty: "Pediatrician", avatar: "https://ui-avatars.com/api/?name=Emily+Davis&background=F59E0B&color=fff" },
-  { id: "d4", name: "Dr. James Wilson", specialty: "General Physician", avatar: "https://ui-avatars.com/api/?name=James+Wilson&background=EC4899&color=fff" },
-];
-
 const timeSlots = [
   "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
   "11:00 AM", "11:30 AM", "01:00 PM", "01:30 PM",
@@ -60,8 +53,31 @@ const Appointments = () => {
   const [ratingTarget, setRatingTarget] = useState(null);
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
   const [prescriptionTarget, setPrescriptionTarget] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+  const [blockedDates, setBlockedDates] = useState([]);
 
   const today = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    apiJson('/api/doctors').then(data => {
+      setDoctors(data.map(d => ({
+        id: d._id,
+        name: d.name,
+        specialty: d.doctorProfile?.specialization || 'General',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=0D8ABC&color=fff`
+      })));
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (selectedDoc?.id) {
+      apiJson(`/api/doctors/${selectedDoc.id}/blocked-dates`)
+        .then(data => setBlockedDates((data.blockedDates || []).map(d => new Date(d).toISOString().split('T')[0])))
+        .catch(() => setBlockedDates([]));
+    } else {
+      setBlockedDates([]);
+    }
+  }, [selectedDoc]);
 
   useEffect(() => {
     fetchAppointments();
@@ -162,6 +178,7 @@ const Appointments = () => {
     if (bookingStep === 2) {
       if (!selectedDate) return toast.error("Please select a date.");
       if (selectedDate < today) return toast.error("Past dates are not allowed.");
+      if (blockedDates.includes(selectedDate)) return toast.error('This doctor is unavailable on the selected date. Please choose another date.');
       if (!selectedTime) return toast.error("Please select a time slot.");
     }
     setBookingStep((prev) => prev + 1);
@@ -469,11 +486,15 @@ const Appointments = () => {
                 <div className="step-content slide-in-right">
                   <h3>{t('appointments.chooseSpecialist')}</h3>
                   <div className="doctor-selection-grid">
-                    {mockDoctors.map((doc) => (
-                      <div key={doc.id} className={`doc-chip ${selectedDoc?.id === doc.id ? 'selected' : ''}`} onClick={() => setSelectedDoc(doc)}>
+                    {doctors.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className={`doc-chip ${selectedDoc?.id === doc.id ? "selected" : ""}`}
+                        onClick={() => setSelectedDoc(doc)}
+                      >
                         <img src={doc.avatar} alt={doc.name} />
                         <div><h5>{doc.name}</h5><span>{doc.specialty}</span></div>
-                        {selectedDoc?.id === doc.id && <div className="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>}
+                        {selectedDoc?.id === doc.id && <div className="check-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>}
                       </div>
                     ))}
                   </div>

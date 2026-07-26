@@ -1,0 +1,249 @@
+.prescriptions-page {
+  padding: 3rem 1.5rem;
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.prescriptions-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  color: #64748b;
+  margin-bottom: 2rem;
+}
+
+.prescription-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.filter-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #334155;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.prescription-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.prescription-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.rx-header {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rx-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.rx-header p {
+  margin: 0.25rem 0 0;
+  color: #e0e7ff;
+  font-size: 0.875rem;
+}
+
+.rx-body {
+  padding: 1.5rem;
+}
+
+.rx-meta {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.rx-meta strong {
+  color: #334155;
+}
+
+.rx-diagnosis {
+  background: #f1f5f9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.rx-diagnosis h4 {
+  margin: 0 0 0.5rem;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.rx-diagnosis p {
+  margin: 0;
+  color: #475569;
+}
+
+.rx-medicines-preview {
+  margin-bottom: 1.5rem;
+}
+
+.rx-medicines-preview ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #475569;
+}
+
+.rx-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.5rem;
+}
+
+.btn-view, .btn-download {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-view {
+  background: white;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.btn-view:hover {
+  background: #eff6ff;
+}
+
+.btn-download {
+  background: #10b981;
+  color: white;
+  border: none;
+}
+
+.btn-download:hover {
+  background: #059669;
+}
+
+/* Expanded Details */
+.rx-expanded-details {
+  margin-top: 1.5rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+.rx-medicines-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.rx-medicines-table th,
+.rx-medicines-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rx-medicines-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.rx-medicines-table td {
+  color: #334155;
+  font-size: 0.875rem;
+}
+
+.rx-notes, .rx-followup {
+  background: #fffbeb;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #f59e0b;
+}
+
+.rx-notes h4, .rx-followup h4 {
+  margin: 0 0 0.5rem;
+  color: #b45309;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rx-notes p, .rx-followup p {
+  margin: 0;
+  color: #78350f;
+  font-size: 0.875rem;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.no-results {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.no-results-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.no-results p {
+  color: #64748b;
+  font-size: 1.125rem;
+  margin: 0;
+}

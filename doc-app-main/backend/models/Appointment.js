@@ -95,8 +95,11 @@ const appointmentSchema = new mongoose.Schema({
   },
   
   // Automations
+  /** @deprecated Use reminder24hSent and reminder1hSent instead */
+  reminderSent: { type: Boolean, default: false },
   reminder24hSent: { type: Boolean, default: false },
   reminder1hSent: { type: Boolean, default: false },
+  rejectionReason: { type: String, default: '' },
   cancellationReason: String,
   cancellationDate: Date,
   
@@ -138,10 +141,6 @@ const appointmentSchema = new mongoose.Schema({
   },
   
   // Reminders and Follow-up
-  reminderSent: {
-    type: Boolean,
-    default: false
-  },
   followUpDate: Date,
   
   // Audit Trail

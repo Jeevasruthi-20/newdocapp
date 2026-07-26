@@ -86,6 +86,13 @@ function TimelineCard({ apt, index }) {
                 <span className="tl-detail-label">Status</span>
                 <span className={`tl-badge badge-${cfg.color}`}>{cfg.icon} {cfg.label}</span>
               </div>
+              {apt.status === 'completed' && (
+                <div className="tl-detail-item" style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                  <button onClick={() => window.location.href = '/prescriptions'} className="tl-book-btn" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
+                    📥 Download Prescription
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -111,6 +118,7 @@ export default function HealthTimeline() {
     all: appointments.length,
     confirmed: appointments.filter((a) => a.status === "confirmed").length,
     scheduled: appointments.filter((a) => ["scheduled","pending"].includes(a.status)).length,
+    completed: appointments.filter((a) => a.status === "completed").length,
     cancelled: appointments.filter((a) => a.status === "cancelled").length,
   };
 
@@ -139,6 +147,10 @@ export default function HealthTimeline() {
             <span className="tl-stat-label">Confirmed</span>
           </div>
           <div className="tl-stat">
+            <span className="tl-stat-num tl-blue">{counts.completed}</span>
+            <span className="tl-stat-label">Completed</span>
+          </div>
+          <div className="tl-stat">
             <span className="tl-stat-num tl-yellow">{counts.scheduled}</span>
             <span className="tl-stat-label">Upcoming</span>
           </div>
@@ -154,6 +166,7 @@ export default function HealthTimeline() {
             { key: "all", label: "All" },
             { key: "confirmed", label: "✅ Confirmed" },
             { key: "scheduled", label: "⏳ Waiting" },
+            { key: "completed", label: "🏁 Completed" },
             { key: "cancelled", label: "❌ Rejected" },
           ].map((f) => (
             <button

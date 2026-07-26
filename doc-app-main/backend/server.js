@@ -4,7 +4,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const session = require('express-session');
 const passport = require('passport');
-require("dotenv").config(); // ensure you have a .env with MONGO_URI
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, ".env") }); // ensure you have a .env with MONGO_URI
 require('./config/auth'); // Initialize passport
 
 const authRoutes = require("./routes/authRoutes");
@@ -14,9 +15,9 @@ const appointmentRoutes = require("./routes/appointmentRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const doctorRoutes = require("./routes/doctorRoutes");
 const initCronJobs = require('./jobs/cronJobs');
 const Prescription = require("./models/Prescription");
-const path = require("path");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { errorHandler, notFound } = require("./middleware/errorMiddleware");
@@ -96,6 +97,7 @@ require('./schedule/appointmentReminders');
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/doctors", doctorRoutes);
 
 // Public prescription verification
 app.get("/api/verify/:verificationId", async (req, res) => {
@@ -119,21 +121,23 @@ app.get("/api/verify/:verificationId", async (req, res) => {
   }
 });
 
-// Google OAuth Routes
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+// Google OAuth Routes (only if configured)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
 
-app.get('/auth/google/callback', 
-  passport.authenticate('google', { 
-    failureRedirect: '/login',
-    session: true
-  }),
-  (req, res) => {
-    // Successful authentication, redirect to the frontend with user data
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`);
-  }
-);
+  app.get('/auth/google/callback', 
+    passport.authenticate('google', { 
+      failureRedirect: '/login',
+      session: true
+    }),
+    (req, res) => {
+      // Successful authentication, redirect to the frontend with user data
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`);
+    }
+  );
+}
 
 // Logout route
 app.get('/auth/logout', (req, res) => {
@@ -161,12 +165,20 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
+
+    // ADD THIS LINE
+    console.log("📂 Connected Database:", mongoose.connection.name);
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://127.0.0.1:${PORT}`);
     });
 
     // Initialize background jobs
     initCronJobs();
+
+    // Start email reminder cron
+    const { startReminderCron } = require('./jobs/reminderCron');
+    startReminderCron();
   })
   .catch((err) => {
     console.error("❌ DB connection error:", err);

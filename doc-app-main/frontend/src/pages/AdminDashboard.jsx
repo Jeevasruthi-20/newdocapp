@@ -20,7 +20,17 @@ const AdminDashboard = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const [stats, setStats] = useState({ totalPatients: 0, totalDoctors: 0, totalAppointments: 0, pendingAppointments: 0 });
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    totalDoctors: 0,
+    totalAppointments: 0,
+    pendingAppointments: 0,
+    completedAppointments: 0,
+    cancelledAppointments: 0,
+    totalPrescriptions: 0,
+    todayAppointments: 0,
+    totalBlockedDates: 0
+  });
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
@@ -35,28 +45,43 @@ const AdminDashboard = () => {
   const [dateFilter, setDateFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
 
-  // Delay form state
-  const [delayMinutes, setDelayMinutes] = useState("");
-  const [delayStartTime, setDelayStartTime] = useState("");
+  // Notifications
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Prescription modal state
   const [prescriptionTarget, setPrescriptionTarget] = useState(null);
-  const [prescriptionText, setPrescriptionText] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
+  const [medications, setMedications] = useState([{ name: "", dosage: "", frequency: "Once a day", duration: "", beforeAfterFood: "After Food", instructions: "" }]);
+  const [notes, setNotes] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+
+  // History modal state
+  const [historyTarget, setHistoryTarget] = useState(null);
+  const [historyLogs, setHistoryLogs] = useState([]);
+
+  // Doctor CRUD state
+  const [showDoctorModal, setShowDoctorModal] = useState(false);
+  const [doctorForm, setDoctorForm] = useState({ name: '', email: '', specialty: '', fee: 500 });
+  const [editingDoctorId, setEditingDoctorId] = useState(null);
+  const [isSavingDoctor, setIsSavingDoctor] = useState(false);
+
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsData, apptsData, patientsData, doctorsData] = await Promise.all([
+      const [statsData, apptsData, patientsData, doctorsData, notifsData] = await Promise.all([
         apiJson(`${API_BASE_URL}/stats`).catch(() => null),
         apiJson(`${API_BASE_URL}/appointments`).catch(() => []),
         apiJson(`${API_BASE_URL}/patients`).catch(() => []),
         apiJson(`${API_BASE_URL}/doctors`).catch(() => []),
+        apiJson(`${API_BASE_URL}/notifications/unread-count`).catch(() => null),
       ]);
 
       if (statsData) setStats(statsData);
       if (apptsData) setAppointments(apptsData);
       if (patientsData) setPatients(patientsData);
       if (doctorsData) setDoctors(doctorsData);
+      if (notifsData) setUnreadCount(notifsData.count || 0);
     } catch (error) {
       console.error("Dashboard fetch error:", error);
     } finally {
@@ -94,62 +119,168 @@ const AdminDashboard = () => {
       setBlockReason("");
       const data = await apiJson(`${API_BASE_URL}/schedule/${selectedDoctor}`);
       setDoctorSchedule(data);
+      fetchData(); // refresh stats
     } catch (error) {
       console.error(error);
       alert(error.message || "Failed to block date.");
     }
   };
 
-  const handleUpdateStatus = async (id, status) => {
-    try {
-      await apiFetch(`${API_BASE_URL}/appointments/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ status }),
-      });
-      fetchData();
-    } catch (error) {
-      console.error("Status update error:", error);
+  const handleTabChange = async (tab) => {
+    setActiveTab(tab);
+    if (tab === "appointments" && unreadCount > 0) {
+      try {
+        await apiFetch(`${API_BASE_URL}/notifications/mark-read`, { method: "PUT" });
+        setUnreadCount(0);
+      } catch (err) {
+        console.error("Failed to mark notifications read", err);
+      }
     }
   };
 
-  const handleReportDelay = async () => {
-    if (!delayMinutes || !delayStartTime) {
-      alert("Please enter minutes and starting time.");
-      return;
-    }
+  const handleReportDelay = async (e) => {
+    e.preventDefault();
+    const delayMinutes = e.target.elements.delayMinutes.value;
+    const date = e.target.elements.delayDate.value;
+    const fromTime = e.target.elements.fromTime.value;
+
+    if (!delayMinutes || !date || !fromTime || !selectedDoctor) return;
     try {
-      await apiJson(`/api/appointments/doctor-delay`, {
+      await apiJson(`${API_BASE_URL}/schedule/${selectedDoctor}/delay`, {
         method: "PUT",
-        body: JSON.stringify({
-          delayMinutes: Number(delayMinutes),
-          date: new Date().toISOString().split('T')[0],
-          fromTime: delayStartTime
-        })
+        body: JSON.stringify({ delayMinutes, date, fromTime })
       });
-      alert(`Successfully added a ${delayMinutes} min delay starting at ${delayStartTime}`);
-      setDelayMinutes("");
-      setDelayStartTime("");
+      alert("Delay reported successfully and affected patients notified!");
+      e.target.reset();
       fetchData();
     } catch (error) {
       console.error(error);
-      alert("Failed to report delay.");
+      alert(error.message || "Failed to report delay.");
     }
+  };
+
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      let rejectionReason = '';
+      if (status === 'cancelled') {
+        rejectionReason = window.prompt('Reason for cancellation (optional):') || '';
+      }
+      await apiJson(`${API_BASE_URL}/appointments/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status, rejectionReason })
+      });
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Failed to update status.");
+    }
+  };
+
+
+
+  const handleOpenDoctorModal = (doc = null) => {
+    if (doc) {
+      setEditingDoctorId(doc._id);
+      setDoctorForm({
+        name: doc.name,
+        email: doc.email,
+        specialty: doc.doctorProfile?.specialization || '',
+        fee: doc.doctorProfile?.consultationFee || 500
+      });
+    } else {
+      setEditingDoctorId(null);
+      setDoctorForm({ name: '', email: '', specialty: '', fee: 500 });
+    }
+    setShowDoctorModal(true);
+  };
+
+  const handleSaveDoctor = async (e) => {
+    e.preventDefault();
+    setIsSavingDoctor(true);
+    try {
+      if (editingDoctorId) {
+        await apiJson(`${API_BASE_URL}/doctors/${editingDoctorId}`, {
+          method: 'PUT',
+          body: JSON.stringify(doctorForm)
+        });
+        alert('Doctor updated successfully');
+      } else {
+        await apiJson(`${API_BASE_URL}/doctors`, {
+          method: 'POST',
+          body: JSON.stringify(doctorForm)
+        });
+        alert('Doctor created successfully');
+      }
+      setShowDoctorModal(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error saving doctor');
+    } finally {
+      setIsSavingDoctor(false);
+    }
+  };
+
+  const handleToggleDoctorStatus = async (id, currentStatus) => {
+    if (!window.confirm(`Are you sure you want to ${currentStatus === false ? 'reactivate' : 'deactivate'} this doctor?`)) return;
+    try {
+      const newStatus = currentStatus === false ? true : false;
+      await apiJson(`${API_BASE_URL}/doctors/${id}/deactivate`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: newStatus })
+      });
+      alert(`Doctor ${newStatus ? 'reactivated' : 'deactivated'} successfully`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error updating doctor status');
+    }
+  };
+
+
+  const handleAddMedicine = () => {
+    setMedications([...medications, { name: "", dosage: "", frequency: "Once a day", duration: "", beforeAfterFood: "After Food", instructions: "" }]);
+  };
+
+  const handleMedicineChange = (index, field, value) => {
+    const updated = [...medications];
+    updated[index][field] = value;
+    setMedications(updated);
+  };
+
+  const handleRemoveMedicine = (index) => {
+    const updated = medications.filter((_, i) => i !== index);
+    setMedications(updated);
   };
 
   const handleSavePrescription = async () => {
-    if (!prescriptionText.trim()) return;
+    if (!diagnosis.trim() || medications.some(m => !m.name.trim() || !m.dosage.trim())) {
+      alert("Please fill in diagnosis and all medicine details.");
+      return;
+    }
     try {
-      await apiJson(`/api/appointments/${prescriptionTarget._id}/prescription`, {
-        method: "PUT",
-        body: JSON.stringify({ prescription: prescriptionText })
+      await apiJson(`${API_BASE_URL}/prescriptions`, {
+        method: "POST",
+        body: JSON.stringify({
+          patientId: prescriptionTarget.patient?._id,
+          appointmentId: prescriptionTarget._id,
+          doctorId: prescriptionTarget.doctor?._id,
+          diagnosis,
+          medications,
+          notes,
+          followUpDate
+        })
       });
       alert("Prescription saved successfully!");
       setPrescriptionTarget(null);
-      setPrescriptionText("");
+      setDiagnosis("");
+      setMedications([{ name: "", dosage: "", frequency: "Once a day", duration: "", beforeAfterFood: "After Food", instructions: "" }]);
+      setNotes("");
+      setFollowUpDate("");
       fetchData();
     } catch (error) {
       console.error(error);
-      alert("Failed to save prescription.");
+      alert(error.message || "Failed to save prescription.");
     }
   };
 
@@ -160,6 +291,17 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error("Delete error:", error);
+    }
+  };
+
+  const handleViewHistory = async (appointment) => {
+    try {
+      const logs = await apiJson(`${API_BASE_URL}/audit-logs/appointment/${appointment._id}`);
+      setHistoryLogs(logs);
+      setHistoryTarget(appointment);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      alert("Failed to load audit history.");
     }
   };
 
@@ -212,7 +354,6 @@ const AdminDashboard = () => {
 
   const filteredAppointments = getFilteredAppointments();
 
-  // Count for quick tabs
   const countByStatus = (status) => appointments.filter((a) => a.status === status).length;
 
   if (!currentUser || currentUser.role !== "admin") return null;
@@ -224,10 +365,18 @@ const AdminDashboard = () => {
           <span>🏥</span> Admin Panel
         </div>
         <nav className="admin-nav">
-          <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}>📊 Overview</button>
-          <button className={activeTab === "appointments" ? "active" : ""} onClick={() => setActiveTab("appointments")}>📅 Appointments</button>
-          <button className={activeTab === "patients" ? "active" : ""} onClick={() => setActiveTab("patients")}>👥 Patients</button>
-          <button className={activeTab === "schedule" ? "active" : ""} onClick={() => setActiveTab("schedule")}>🗓️ Schedule</button>
+          <button className={activeTab === "overview" ? "active" : ""} onClick={() => handleTabChange("overview")}>📊 Overview</button>
+          <button className={activeTab === "appointments" ? "active" : ""} onClick={() => handleTabChange("appointments")} style={{ position: 'relative' }}>
+            📅 Appointments
+            {unreadCount > 0 && (
+              <span style={{ position: 'absolute', top: '5px', right: '10px', background: 'red', color: 'white', borderRadius: '50%', padding: '0.15rem 0.4rem', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button className={activeTab === "patients" ? "active" : ""} onClick={() => handleTabChange("patients")}>👥 Patients</button>
+          <button className={activeTab === "doctors" ? "active" : ""} onClick={() => handleTabChange("doctors")}>👨‍⚕️ Doctors</button>
+          <button className={activeTab === "schedule" ? "active" : ""} onClick={() => handleTabChange("schedule")}>🗓️ Schedule</button>
           <button onClick={logout} className="admin-logout-btn">🚪 Logout</button>
         </nav>
       </div>
@@ -242,11 +391,15 @@ const AdminDashboard = () => {
         </header>
 
         <div className="admin-content">
-          <div className="stats-grid">
-            <StatCard title="Total Patients" value={stats.totalPatients} icon="👥" color="blue" />
-            <StatCard title="Total Appointments" value={stats.totalAppointments} icon="📅" color="green" />
+          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+            <StatCard title="Today's Appointments" value={stats.todayAppointments} icon="📋" color="blue" />
+            <StatCard title="Pending Appointments" value={stats.pendingAppointments} icon="⏳" color="orange" />
+            <StatCard title="Completed Appointments" value={stats.completedAppointments} icon="✅" color="green" />
+            <StatCard title="Cancelled Appointments" value={stats.cancelledAppointments} icon="❌" color="red" />
             <StatCard title="Total Doctors" value={stats.totalDoctors} icon="👨‍⚕️" color="purple" />
-            <StatCard title="Pending Review" value={stats.pendingAppointments} icon="⌛" color="orange" />
+            <StatCard title="Total Patients" value={stats.totalPatients} icon="👥" color="blue" />
+            <StatCard title="Total Prescriptions" value={stats.totalPrescriptions} icon="💊" color="green" />
+            <StatCard title="Blocked Dates" value={stats.totalBlockedDates} icon="🚫" color="orange" />
           </div>
 
           <div className="admin-sections">
@@ -255,25 +408,19 @@ const AdminDashboard = () => {
                 <div className="card-header">
                   <h2>Appointment Management</h2>
                   <div className="appt-count-badges">
-                    <span className="count-badge scheduled" onClick={() => setStatusFilter("scheduled")}>
-                      ⏳ Waiting: {countByStatus("scheduled")}
+                    <span className="count-badge scheduled" onClick={() => setStatusFilter("pending")}>
+                      ⏳ Pending: {countByStatus("pending")}
                     </span>
                     <span className="count-badge confirmed" onClick={() => setStatusFilter("confirmed")}>
                       ✅ Confirmed: {countByStatus("confirmed")}
                     </span>
+                    <span className="count-badge completed" onClick={() => setStatusFilter("completed")} style={{ background: '#ecfdf5', color: '#059669', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                      🏁 Completed: {countByStatus("completed")}
+                    </span>
                     <span className="count-badge cancelled" onClick={() => setStatusFilter("cancelled")}>
-                      ❌ Rejected: {countByStatus("cancelled")}
+                      ❌ Cancelled: {countByStatus("cancelled")}
                     </span>
                   </div>
-                </div>
-
-                <div className="admin-delay-bar" style={{ padding: '1rem', background: '#fff5f5', borderLeft: '4px solid #ff4b4b', marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <strong style={{ color: '#c53030' }}>⚠️ Report Delay:</strong>
-                  <input type="number" placeholder="Mins (e.g. 30)" value={delayMinutes} onChange={e => setDelayMinutes(e.target.value)} style={{ width: '120px', padding: '0.5rem' }} />
-                  <span>from</span>
-                  <input type="time" value={delayStartTime} onChange={e => setDelayStartTime(e.target.value)} style={{ padding: '0.5rem' }} />
-                  <button className="btn" onClick={handleReportDelay} style={{ background: '#ff4b4b', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Apply Delay</button>
-                  <small style={{ color: '#718096' }}>All subsequent appointments will be pushed back automatically.</small>
                 </div>
 
                 {/* Filter Bar */}
@@ -309,10 +456,10 @@ const AdminDashboard = () => {
                     <label>Status</label>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                       <option value="all">All Statuses</option>
-                      <option value="scheduled">Waiting / Scheduled</option>
+                      <option value="pending">Pending</option>
                       <option value="confirmed">Confirmed</option>
-                      <option value="cancelled">Rejected / Cancelled</option>
                       <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
 
@@ -354,7 +501,7 @@ const AdminDashboard = () => {
                         <tr>
                           <th>Patient</th>
                           <th>Doctor</th>
-                          <th>Date</th>
+                          <th>Date & Time</th>
                           <th>Reason</th>
                           <th>Status</th>
                           <th>Actions</th>
@@ -373,42 +520,37 @@ const AdminDashboard = () => {
                             <td>
                               <div className="date-cell">
                                 <span className="date-main">{new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                                {app.startTime && <span className="date-time">{app.startTime}</span>}
-                                {app.delayMinutes > 0 && <span className="date-time" style={{color: 'red', fontSize:'0.75rem'}}>Delayed {app.delayMinutes}m (Now: {app.expectedStartTime})</span>}
+                                {app.startTime && <span className="date-time">{app.startTime} {app.consultationType === 'online' ? '(Online)' : '(Offline)'}</span>}
                               </div>
                             </td>
                             <td className="reason-cell">{app.reason || '—'}</td>
                             <td>
                               <span className={`status-badge ${app.status}`}>
-                                {app.status === 'scheduled' ? '⏳ Waiting' :
+                                {app.status === 'pending' ? '⏳ Pending' :
                                  app.status === 'confirmed' ? '✅ Confirmed' :
-                                 app.status === 'cancelled' ? '❌ Rejected' :
+                                 app.status === 'cancelled' ? '❌ Cancelled' :
                                  app.status === 'completed' ? '🏁 Completed' :
                                  app.status}
                               </span>
-                              {app.checkInTime && <div style={{ fontSize: '0.75rem', color: '#38a169', marginTop: '4px', fontWeight: 'bold' }}>📍 Checked In (#{app.queueNumber})</div>}
-                              {app.prescription && <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>📄 Prescribed</div>}
                             </td>
                             <td>
-                              <div className="action-btns" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                  {(app.status === 'scheduled' || app.status === 'pending') && (
-                                    <button className="approve-btn" onClick={() => handleUpdateStatus(app._id, 'confirmed')}>Approve</button>
-                                  )}
-                                  {app.status !== 'cancelled' && app.status !== 'completed' && (
-                                    <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>Reject</button>
-                                  )}
-                                </div>
-                                {app.type === 'video' && app.meetLink && (
-                                  <a href={app.meetLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm" style={{ background: '#3b82f6', color: '#fff', textAlign: 'center', textDecoration: 'none', padding: '4px' }}>
-                                    📹 Join Video Call
-                                  </a>
+                              <div className="action-btns" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {app.status === 'pending' && (
+                                  <>
+                                    <button className="approve-btn" onClick={() => handleUpdateStatus(app._id, 'confirmed')}>✅ Confirm</button>
+                                    <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>❌ Cancel</button>
+                                  </>
                                 )}
-                                {(app.status === 'confirmed' || app.status === 'in-progress' || app.checkInTime) && !app.prescription && (
-                                  <button className="btn btn-sm" style={{ background: '#10b981', color: 'white', padding: '4px' }} onClick={() => { setPrescriptionTarget(app); setPrescriptionText(""); }}>
-                                    ✍️ Write Prescription
-                                  </button>
+                                {app.status === 'confirmed' && (
+                                  <>
+                                    <button className="approve-btn" style={{ background: '#3b82f6' }} onClick={() => handleUpdateStatus(app._id, 'completed')}>🏁 Complete</button>
+                                    <button className="reject-btn" onClick={() => handleUpdateStatus(app._id, 'cancelled')}>❌ Cancel</button>
+                                  </>
                                 )}
+                                {app.status === 'completed' && !app.prescription && (
+                                  <button className="approve-btn" style={{ background: '#10b981' }} onClick={() => setPrescriptionTarget(app)}>💊 Add Prescription</button>
+                                )}
+                                <button className="outline-btn" style={{ padding: '0.25rem 0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', background: 'white', cursor: 'pointer' }} onClick={() => handleViewHistory(app)}>🕒 History</button>
                               </div>
                             </td>
                           </tr>
@@ -455,6 +597,53 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {activeTab === "doctors" && (
+              <div className="admin-card">
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2>Doctor Management</h2>
+                  <button className="approve-btn" style={{ background: '#3b82f6' }} onClick={() => handleOpenDoctorModal()}>+ Add Doctor</button>
+                </div>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Specialty</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doctors.map(d => (
+                      <tr key={d._id} style={{ opacity: d.isActive === false ? 0.6 : 1 }}>
+                        <td>
+                          <div className="patient-cell">
+                            <div className="patient-avatar">{(d.name || "?")[0].toUpperCase()}</div>
+                            {d.name}
+                          </div>
+                        </td>
+                        <td>{d.email}</td>
+                        <td>{d.doctorProfile?.specialization || 'General'}</td>
+                        <td>
+                           <span className={`status-badge ${d.isActive === false ? 'cancelled' : 'completed'}`}>
+                             {d.isActive === false ? 'Inactive' : 'Active'}
+                           </span>
+                        </td>
+                        <td>
+                          <div className="action-btns">
+                             <button className="approve-btn" onClick={() => handleOpenDoctorModal(d)}>Edit</button>
+                             <button className={d.isActive === false ? "approve-btn" : "reject-btn"} onClick={() => handleToggleDoctorStatus(d._id, d.isActive)}>
+                               {d.isActive === false ? 'Reactivate' : 'Deactivate'}
+                             </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {activeTab === "schedule" && (
               <div className="admin-card">
                 <div className="card-header">
@@ -480,6 +669,17 @@ const AdminDashboard = () => {
                         <button className="btn" onClick={handleBlockDate} style={{ background: '#3b82f6', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Block Date</button>
                       </div>
 
+                      <hr style={{ margin: '2rem 0', borderColor: '#e2e8f0' }} />
+
+                      <h3>Report Delay</h3>
+                      <p style={{ fontSize: '0.875rem', color: '#718096', marginBottom: '1rem' }}>Shift schedule and notify affected patients for the given date.</p>
+                      <form onSubmit={handleReportDelay} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <input type="date" name="delayDate" required style={{ padding: '0.5rem' }} />
+                        <input type="time" name="fromTime" required style={{ padding: '0.5rem' }} title="From what time does the delay start?" />
+                        <input type="number" name="delayMinutes" placeholder="Minutes delayed" required min="1" max="180" style={{ padding: '0.5rem', width: '150px' }} />
+                        <button type="submit" className="btn" style={{ background: '#f59e0b', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Report Delay</button>
+                      </form>
+
                       <h3 style={{ marginTop: '2rem' }}>Currently Blocked Dates</h3>
                       {doctorSchedule.blockedDates && doctorSchedule.blockedDates.length > 0 ? (
                         <ul style={{ marginTop: '1rem', paddingLeft: '1.5rem' }}>
@@ -503,21 +703,193 @@ const AdminDashboard = () => {
 
       {/* Prescription Writing Modal */}
       {prescriptionTarget && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '500px' }}>
-            <h2 style={{ marginBottom: '1rem' }}>Write Prescription</h2>
-            <p style={{ marginBottom: '1rem', color: '#4a5568' }}>Patient: {prescriptionTarget.patient?.name}</p>
-            <textarea 
-              rows="6" 
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', marginBottom: '1rem' }} 
-              placeholder="Rx..."
-              value={prescriptionText}
-              onChange={(e) => setPrescriptionText(e.target.value)}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-              <button className="btn outline-btn" onClick={() => setPrescriptionTarget(null)}>Cancel</button>
-              <button className="btn" style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px' }} onClick={handleSavePrescription}>Save & Complete</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, overflowY: 'auto' }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '800px', margin: '2rem auto', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>💊 Add Prescription</h2>
+            
+            <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem' }}>
+              <div><strong>Patient:</strong> {prescriptionTarget.patient?.name}</div>
+              <div><strong>Doctor:</strong> {prescriptionTarget.doctor?.name}</div>
+              <div><strong>Date:</strong> {new Date(prescriptionTarget.date).toLocaleDateString()}</div>
             </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>Diagnosis <span style={{color: 'red'}}>*</span></label>
+              <textarea 
+                rows="2" 
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} 
+                placeholder="Patient diagnosis..."
+                value={diagnosis}
+                onChange={(e) => setDiagnosis(e.target.value)}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontWeight: 'bold' }}>Medicines <span style={{color: 'red'}}>*</span></label>
+                <button onClick={handleAddMedicine} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }}>+ Add Medicine</button>
+              </div>
+              
+              {medications.map((med, index) => (
+                <div key={index} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '4px', marginBottom: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: 2 }}>
+                      <input type="text" placeholder="Medicine Name" value={med.name} onChange={(e) => handleMedicineChange(index, 'name', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input type="text" placeholder="Dosage (e.g. 500mg)" value={med.dosage} onChange={(e) => handleMedicineChange(index, 'dosage', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <select value={med.frequency} onChange={(e) => handleMedicineChange(index, 'frequency', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px' }}>
+                        <option value="Once a day">Once a day</option>
+                        <option value="Twice a day">Twice a day</option>
+                        <option value="Three times a day">Three times a day</option>
+                        <option value="As needed">As needed</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input type="text" placeholder="Duration (e.g. 5 days)" value={med.duration} onChange={(e) => handleMedicineChange(index, 'duration', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <select value={med.beforeAfterFood} onChange={(e) => handleMedicineChange(index, 'beforeAfterFood', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px' }}>
+                        <option value="Before Food">Before Food</option>
+                        <option value="After Food">After Food</option>
+                        <option value="With Food">With Food</option>
+                        <option value="Empty Stomach">Empty Stomach</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <input type="text" placeholder="Instructions (Optional)" value={med.instructions} onChange={(e) => handleMedicineChange(index, 'instructions', e.target.value)} style={{ flex: 1, padding: '0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} />
+                    {medications.length > 1 && (
+                      <button onClick={() => handleRemoveMedicine(index)} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ flex: 2 }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>Additional Notes</label>
+                <textarea 
+                  rows="2" 
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} 
+                  placeholder="Notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>Follow-up Date</label>
+                <input 
+                  type="date" 
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e0', borderRadius: '4px' }} 
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '2px solid #e2e8f0', paddingTop: '1.5rem' }}>
+              <button className="btn outline-btn" onClick={() => setPrescriptionTarget(null)} style={{ padding: '0.75rem 1.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', cursor: 'pointer', background: 'white' }}>Cancel</button>
+              <button className="btn" style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleSavePrescription}>Save Prescription</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyTarget && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, overflowY: 'auto' }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '600px', margin: '2rem auto', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <h2>🕒 Audit History</h2>
+              <button onClick={() => setHistoryTarget(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div><strong>Patient:</strong> {historyTarget.patient?.name}</div>
+              <div><strong>Doctor:</strong> {historyTarget.doctor?.name}</div>
+              <div><strong>Current Status:</strong> <span style={{ textTransform: 'capitalize' }}>{historyTarget.status}</span></div>
+            </div>
+
+            <div style={{ borderLeft: '2px solid #e2e8f0', paddingLeft: '1.5rem', marginLeft: '0.5rem' }}>
+              {historyLogs.length === 0 ? (
+                <p style={{ color: '#718096' }}>No history found for this appointment.</p>
+              ) : (
+                historyLogs.map(log => (
+                  <div key={log._id} style={{ position: 'relative', marginBottom: '1.5rem' }}>
+                    <div style={{ position: 'absolute', left: '-1.9rem', top: '0.25rem', width: '0.75rem', height: '0.75rem', borderRadius: '50%', background: '#3b82f6' }}></div>
+                    <div style={{ fontSize: '0.875rem', color: '#718096', marginBottom: '0.25rem' }}>
+                      {new Date(log.createdAt).toLocaleString()}
+                    </div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                      {log.action === 'STATUS_CHANGE' && (
+                        <span>Status changed from <span style={{ color: '#eab308' }}>{log.oldValue || 'none'}</span> to <span style={{ color: '#10b981' }}>{log.newValue}</span></span>
+                      )}
+                      {log.action === 'PRESCRIPTION_CREATED' && (
+                        <span>Created prescription (Diagnosis: {log.newValue?.diagnosis}, {log.newValue?.medicineCount} medicines)</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#4a5568' }}>
+                      Performed by Admin: <strong>{log.performedByAdmin?.name || 'Unknown'}</strong>
+                    </div>
+                    {log.attributedDoctor && (
+                      <div style={{ fontSize: '0.875rem', color: '#4a5568' }}>
+                        Attributed to: <strong>Dr. {log.attributedDoctor.name}</strong>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <button className="btn outline-btn" onClick={() => setHistoryTarget(null)} style={{ padding: '0.5rem 1.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', cursor: 'pointer', background: 'white' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Doctor CRUD Modal */}
+      {showDoctorModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, overflowY: 'auto' }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '600px', margin: '2rem auto', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <h2>{editingDoctorId ? 'Edit Doctor' : 'Add New Doctor'}</h2>
+              <button onClick={() => setShowDoctorModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+            </div>
+            
+            <form onSubmit={handleSaveDoctor}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Name *</label>
+                <input type="text" required style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e0' }} value={doctorForm.name} onChange={e => setDoctorForm({...doctorForm, name: e.target.value})} placeholder="e.g. Dr. John Smith" />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email *</label>
+                <input type="email" required style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e0' }} value={doctorForm.email} onChange={e => setDoctorForm({...doctorForm, email: e.target.value})} placeholder="e.g. john@medconnect.com" />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Specialty *</label>
+                  <input type="text" required style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e0' }} value={doctorForm.specialty} onChange={e => setDoctorForm({...doctorForm, specialty: e.target.value})} placeholder="e.g. Cardiologist" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Consultation Fee (₹) *</label>
+                  <input type="number" required min="0" style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e0' }} value={doctorForm.fee} onChange={e => setDoctorForm({...doctorForm, fee: Number(e.target.value)})} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                <button type="button" className="btn outline-btn" onClick={() => setShowDoctorModal(false)} style={{ padding: '0.5rem 1.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', cursor: 'pointer', background: 'white' }} disabled={isSavingDoctor}>Cancel</button>
+                <button type="submit" className="btn" style={{ padding: '0.5rem 1.5rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }} disabled={isSavingDoctor}>{isSavingDoctor ? 'Saving...' : 'Save Doctor'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

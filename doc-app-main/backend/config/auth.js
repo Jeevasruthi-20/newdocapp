@@ -28,32 +28,36 @@ passport.use(new LocalStrategy({
   }
 ));
 
-// Google Strategy
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback"
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      let user = await User.findOne({ googleId: profile.id });
-      
-      if (!user) {
-        user = new User({
-          googleId: profile.id,
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          provider: 'google'
-        });
-        await user.save();
+// Google Strategy (optional)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "/auth/google/callback"
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ googleId: profile.id });
+        
+        if (!user) {
+          user = new User({
+            googleId: profile.id,
+            name: profile.displayName,
+            email: profile.emails[0].value,
+            provider: 'google'
+          });
+          await user.save();
+        }
+        
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
       }
-      
-      return done(null, user);
-    } catch (error) {
-      return done(error, null);
     }
-  }
-));
+  ));
+} else {
+  console.warn('Google OAuth not configured; skipping Google strategy.');
+}
 
 passport.serializeUser((user, done) => {
   done(null, user.id);
