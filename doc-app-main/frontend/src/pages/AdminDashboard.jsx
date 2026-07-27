@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, apiJson } from "../lib/api";
+import AdminAnalytics from "../components/AdminAnalytics";
 import "./AdminDashboard.css";
 
 const API_BASE_URL = "/api/admin";
@@ -165,7 +166,7 @@ const AdminDashboard = () => {
       if (status === 'cancelled') {
         rejectionReason = window.prompt('Reason for cancellation (optional):') || '';
       }
-      await apiJson(`${API_BASE_URL}/appointments/${id}/status`, {
+      await apiJson(`${API_BASE_URL}/appointments/${id}`, {
         method: "PUT",
         body: JSON.stringify({ status, rejectionReason })
       });
@@ -376,6 +377,7 @@ const AdminDashboard = () => {
           </button>
           <button className={activeTab === "patients" ? "active" : ""} onClick={() => handleTabChange("patients")}>👥 Patients</button>
           <button className={activeTab === "doctors" ? "active" : ""} onClick={() => handleTabChange("doctors")}>👨‍⚕️ Doctors</button>
+          <button className={activeTab === "analytics" ? "active" : ""} onClick={() => handleTabChange("analytics")}>📈 Analytics</button>
           <button className={activeTab === "schedule" ? "active" : ""} onClick={() => handleTabChange("schedule")}>🗓️ Schedule</button>
           <button onClick={logout} className="admin-logout-btn">🚪 Logout</button>
         </nav>
@@ -403,6 +405,10 @@ const AdminDashboard = () => {
           </div>
 
           <div className="admin-sections">
+            {activeTab === "analytics" && (
+              <AdminAnalytics />
+            )}
+            
             {(activeTab === "overview" || activeTab === "appointments") && (
               <div className="admin-card">
                 <div className="card-header">

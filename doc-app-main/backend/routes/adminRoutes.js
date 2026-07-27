@@ -87,12 +87,24 @@ router.put('/appointments/:id', async (req, res) => {
     // Send emails asynchronously
     if (oldStatus !== status) {
       const emailService = require('../services/emailService');
+      const { formatDoctorName } = require('../utils/formatters');
       const p = appointment.patient;
       const d = appointment.doctor;
+      const Notification = require('../models/Notification');
       if (status === 'confirmed') {
         emailService.sendBookingConfirmedEmail(p.email, p.name, d.name, appointment.date, appointment.startTime, appointment.consultationType, appointment.appointmentNumber).catch(e => console.error(e));
+        Notification.create({
+          receiverId: p._id,
+          receiverRole: 'patient',
+          message: `The admin has approved your appointment with ${formatDoctorName(d.name)} on ${new Date(appointment.date).toDateString()}.`
+        }).catch(e => console.error(e));
       } else if (status === 'cancelled') {
         emailService.sendBookingCancelledEmail(p.email, p.name, d.name, appointment.date, appointment.startTime, appointment.rejectionReason).catch(e => console.error(e));
+        Notification.create({
+          receiverId: p._id,
+          receiverRole: 'patient',
+          message: `Your appointment with ${formatDoctorName(d.name)} on ${new Date(appointment.date).toDateString()} has been cancelled by the admin.`
+        }).catch(e => console.error(e));
       }
     }
 
@@ -579,6 +591,107 @@ router.put('/notifications/mark-read', async (req, res) => {
     res.json({ message: 'Notifications marked as read' });
   } catch (error) {
     res.status(500).json({ message: 'Error updating notifications', error: error.message });
+  }
+});
+
+// Analytics Endpoints
+
+router.get('/analytics/appointments-over-time', async (req, res) => {
+  try {
+    const range = req.query.range || '30d';
+    const days = range === '90d' ? 90 : 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const format = days <= 30 ? '%Y-%m-%d' : '%Y-W%U';
+
+    const data = await Appointment.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      { 
+        $group: {
+          _id: { $dateToString: { format, date: '$createdAt' } },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id': 1 } },
+      { $project: { date: '$_id', count: 1, _id: 0 } }
+    ]);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching analytics', error: error.message });
+  }
+});
+
+router.get('/analytics/status-breakdown', async (req, res) => {
+  try {
+    const data = await Appointment.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      },
+      { $project: { status: '$_id', count: 1, _id: 0 } }
+    ]);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching analytics', error: error.message });
+  }
+});
+
+router.get('/analytics/top-specialties', async (req, res) => {
+  try {
+    const data = await Appointment.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'doctor',
+          foreignField: '_id',
+          as: 'doctorData'
+        }
+      },
+      { $unwind: '$doctorData' },
+      {
+        $group: {
+          _id: '$doctorData.doctorProfile.specialization',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $project: { specialty: '$_id', count: 1, _id: 0 } }
+    ]);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching analytics', error: error.message });
+  }
+});
+
+router.get('/analytics/doctor-utilization', async (req, res) => {
+  try {
+    const data = await Appointment.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'doctor',
+          foreignField: '_id',
+          as: 'doctorData'
+        }
+      },
+      { $unwind: '$doctorData' },
+      {
+        $group: {
+          _id: '$doctorData.name',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+      { $project: { doctorName: '$_id', count: 1, _id: 0 } }
+    ]);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching analytics', error: error.message });
   }
 });
 

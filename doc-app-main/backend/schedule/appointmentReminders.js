@@ -19,7 +19,7 @@ async function sendReminder(appointment, type) {
   const html = `
     <h2>Appointment ${type.replace('_', ' ')}</h2>
     <p>Dear ${patient.name},</p>
-    <p>Your appointment with Dr. ${appointment.doctorName || 'your doctor'} is scheduled for <strong>${appointment.date.toDateString()}</strong> at <strong>${appointment.startTime}</strong>.</p>
+    <p>Your appointment with ${formatDoctorName(appointment.doctorName || 'your doctor')} is scheduled for <strong>${appointment.date.toDateString()}</strong> at <strong>${appointment.startTime}</strong>.</p>
     <p>Appointment ID: ${appointment._id}</p>
     <p>Thank you for using MedConnect.</p>
   `;

@@ -17,7 +17,9 @@ router.get('/patient', async (req, res) => {
         .sort({ date: -1 })
         .limit(20),
       Prescription.find({ patient: userId })
-        .sort({ consultationDate: -1 })
+        .populate('doctor', 'name doctorProfile.specialization')
+        .populate('patient', 'name')
+        .sort({ date: -1 })
         .limit(10),
     ]);
 

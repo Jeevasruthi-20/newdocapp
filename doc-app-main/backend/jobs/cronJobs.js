@@ -57,7 +57,7 @@ const initCronJobs = () => {
           await sendEmail({
             email: apt.patient.email,
             subject: 'Reminder: Your Appointment Tomorrow',
-            message: `Hello ${apt.patient.name}, this is a reminder for your appointment with Dr. ${apt.doctor?.name} tomorrow at ${apt.startTime}.`,
+            message: `Hello ${apt.patient.name}, this is a reminder for your appointment with ${formatDoctorName(apt.doctor?.name)} tomorrow at ${apt.startTime}.`,
           });
           apt.reminder24hSent = true;
           await apt.save();

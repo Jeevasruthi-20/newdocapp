@@ -16,6 +16,7 @@ const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const initCronJobs = require('./jobs/cronJobs');
 const Prescription = require("./models/Prescription");
 const helmet = require("helmet");
@@ -98,6 +99,7 @@ app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/doctors", doctorRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Public prescription verification
 app.get("/api/verify/:verificationId", async (req, res) => {

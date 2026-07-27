@@ -15,9 +15,8 @@ router.get('/my', async (req, res) => {
       : { patient: req.user._id };
 
     const prescriptions = await Prescription.find(query)
-      .populate('doctor', 'name doctorProfile')
+      .populate('doctor', 'name doctorProfile.specialization')
       .populate('patient', 'name')
-      .populate('appointment', 'date type')
       .sort({ date: -1 });
 
     res.json(prescriptions);
@@ -65,6 +64,13 @@ router.post('/', async (req, res) => {
       await appointment.save();
     }
 
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      receiverId: patientId,
+      receiverRole: 'patient',
+      message: `Your prescription has been uploaded for the appointment on ${new Date(appointment.date).toDateString()}.`
+    }).catch(e => console.error("Notification error:", e));
+
     res.status(201).json(prescription);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -77,7 +83,7 @@ router.get('/:id/pdf', async (req, res) => {
     const prescription = await Prescription.findById(req.params.id)
       .populate('doctor', 'name doctorProfile')
       .populate('patient', 'name email dob phone')
-      .populate('appointment', 'date type reason');
+      .populate('appointment');
     if (!prescription) return res.status(404).json({ message: 'Prescription not found' });
     res.json(prescription);
   } catch (error) {

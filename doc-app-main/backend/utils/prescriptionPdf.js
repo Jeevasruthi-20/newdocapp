@@ -30,7 +30,7 @@ const generatePrescriptionPdf = async (prescription, baseUrl = 'http://localhost
     // Doctor & patient info
     doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold').text('Prescribing Doctor');
     doc.font('Helvetica').fontSize(10).fillColor('#475569');
-    doc.text(`Dr. ${prescription.doctorName}`);
+    doc.text(`${formatDoctorName(prescription.doctorName)}`);
     if (prescription.doctorSpecialization) doc.text(prescription.doctorSpecialization);
     doc.text(prescription.hospitalName);
     if (prescription.hospitalAddress) doc.text(prescription.hospitalAddress);

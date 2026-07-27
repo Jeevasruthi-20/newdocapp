@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiDownload, FiFileText, FiShield, FiEye } from 'react-icons/fi';
+import { FiDownload, FiShield, FiEye } from 'react-icons/fi';
 import { apiJson } from '../lib/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './Prescriptions.css';
 
 const Prescriptions = () => {
@@ -13,17 +15,17 @@ const Prescriptions = () => {
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    apiJson('/api/prescriptions/my')
+    apiJson('/api/prescriptions/my', { headers: { 'Cache-Control': 'no-cache' } })
       .then(setPrescriptions)
-      .catch(console.error)
+      .catch(err => {
+        console.error("Prescriptions fetch error:", err);
+        alert("Failed to load prescriptions: " + err.message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const downloadPdf = (rx) => {
-    Promise.all([
-      import('jspdf'),
-      import('jspdf-autotable')
-    ]).then(([{ default: jsPDF }]) => {
+    try {
       const doc = new jsPDF();
       
       // Header
@@ -77,7 +79,7 @@ const Prescriptions = () => {
         m.instructions || '-'
       ]) || [];
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: startY,
         head: [['#', 'Medicine', 'Dosage', 'Frequency', 'Duration', 'Timing', 'Instructions']],
         body: tableData,
@@ -110,10 +112,10 @@ const Prescriptions = () => {
       doc.text(`Doctor Signature: _______________________`, 130, 280);
       
       doc.save(`prescription-${rx._id.substring(0,8)}.pdf`);
-    }).catch(err => {
-      console.error("Failed to load jsPDF", err);
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
       alert("Failed to generate PDF. Please try again later.");
-    });
+    }
   };
 
   const filteredPrescriptions = prescriptions.filter(rx => {

@@ -1,4 +1,5 @@
-const nodemailer = require("nodemailer");
+const nodemailer = require('nodemailer');
+const { formatDoctorName } = require('../utils/formatters');
 
 
 
@@ -208,9 +209,9 @@ Your appointment request has been submitted.
 
 <table>
 
-<tr>
-<td>Doctor</td>
-<td>Dr. ${doctor}</td>
+          <li style="margin-bottom: 10px;">
+            <strong style="color: #64748b;">Doctor:</strong> ${formatDoctorName(doctor)}
+          </li>
 </tr>
 
 
@@ -312,7 +313,7 @@ Appointment ID:${id}
 
 
 <p>
-Doctor: Dr.${doctor}
+Doctor: ${formatDoctorName(doctor)}
 </p>
 
 
@@ -377,7 +378,7 @@ We regret to inform you that your appointment has been cancelled.
 
 <tr>
 <td>Doctor</td>
-<td>Dr. ${doctor}</td>
+<td>${formatDoctorName(doctor)}</td>
 </tr>
 
 <tr>
@@ -441,9 +442,9 @@ template(
 Dear ${patient},
 </p>
 
-<p>
-Your prescription from Dr. ${doctor} is now ready.
-</p>
+          <p style="font-size: 16px; line-height: 1.5; color: #334155; margin-bottom: 24px;">
+            Your prescription from ${formatDoctorName(doctor)} is now ready.
+          </p>
 
 <table>
 
@@ -501,9 +502,9 @@ template(
 Dear ${patient},
 </p>
 
-<p>
-Dr. ${doctor} is running behind schedule. Your appointment time has been adjusted.
-</p>
+          <p style="font-size: 16px; line-height: 1.5; color: #334155; margin-bottom: 24px;">
+            ${formatDoctorName(doctor)} is running behind schedule. Your appointment time has been adjusted.
+          </p>
 
 <table>
 
@@ -566,10 +567,10 @@ This is a reminder that your appointment is coming up in ${timeframe}.
 
 <table>
 
-<tr>
-<td>Doctor</td>
-<td>Dr. ${doctor}</td>
-</tr>
+                  <tr>
+                    <td style="padding: 10px; font-weight: bold; color: #64748b;">Doctor</td>
+                    <td>${formatDoctorName(doctor)}</td>
+                  </tr>
 
 <tr>
 <td>Date</td>

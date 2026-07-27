@@ -348,12 +348,12 @@ const Doctors = () => {
                   <div className="doctor-rating">
                     <div className="stars">
                       {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`star ${i < Math.floor(doctor.rating) ? 'filled' : ''}`}>
+                        <span key={i} className={`star ${i < Math.floor(doctor.averageRating || doctor.rating || 0) ? 'filled' : ''}`}>
                           ★
                         </span>
                       ))}
                     </div>
-                    <span className="rating-text">{doctor.rating} ({doctor.reviews} {t('common.share') === 'பகிர்' ? 'மதிப்புரைகள்' : 'reviews'})</span>
+                    <span className="rating-text">{doctor.averageRating || doctor.rating || 0} ({(doctor.totalReviews !== undefined ? doctor.totalReviews : doctor.reviews)} {t('common.share') === 'பகிர்' ? 'மதிப்புரைகள்' : 'reviews'})</span>
                   </div>
                   
                   <div className="doctor-details">

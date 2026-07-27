@@ -5,8 +5,10 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import {
   FiCalendar, FiFileText, FiBell, FiActivity, FiDownload,
-  FiHeart, FiUser, FiChevronRight, FiClock, FiAlertCircle, FiCheckCircle, FiRefreshCw,
+  FiHeart, FiUser, FiChevronRight, FiClock, FiAlertCircle, FiCheckCircle, FiRefreshCw, FiStar,
 } from 'react-icons/fi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useAuth } from '../context/AuthContext';
 import { apiJson } from '../lib/api';
 import Card from '../components/ui/Card';
@@ -31,6 +33,9 @@ const PatientDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [delayActions, setDelayActions] = useState({});
+  const [reviewingAptId, setReviewingAptId] = useState(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
 
   const fetchData = useCallback(() => {
     apiJson('/api/dashboard/patient')
@@ -40,6 +45,95 @@ const PatientDashboard = () => {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleDownloadPdf = (e, rx) => {
+    e.preventDefault();
+    try {
+      const doc = new jsPDF();
+      
+      doc.setFontSize(22);
+      doc.setTextColor(59, 130, 246);
+      doc.text('MedConnect Hospital', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Your Trusted Healthcare Partner', 105, 28, { align: 'center' });
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 35, 190, 35);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      
+      doc.setFont(undefined, 'bold');
+      doc.text('Doctor Details:', 20, 45);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Dr. ${rx.doctor?.name || rx.doctorName || 'Unknown'}`, 20, 52);
+      doc.text(`${rx.doctor?.doctorProfile?.specialization || 'General Physician'}`, 20, 59);
+      
+      doc.setFont(undefined, 'bold');
+      doc.text('Patient Details:', 120, 45);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Name: ${getDisplayName() || rx.patient?.name || 'Unknown'}`, 120, 52);
+      doc.text(`Date: ${new Date(rx.date || rx.consultationDate).toLocaleDateString()}`, 120, 59);
+      
+      doc.line(20, 65, 190, 65);
+      
+      doc.setFont(undefined, 'bold');
+      doc.text('Diagnosis:', 20, 75);
+      doc.setFont(undefined, 'normal');
+      const splitDiagnosis = doc.splitTextToSize(rx.diagnosis || 'Not specified', 170);
+      doc.text(splitDiagnosis, 20, 82);
+      
+      const diagnosisHeight = splitDiagnosis.length * 7;
+      let startY = 82 + diagnosisHeight + 5;
+      
+      const tableData = rx.medications?.map((m, i) => [
+        i + 1,
+        m.name,
+        m.dosage,
+        m.frequency,
+        m.duration,
+        m.beforeAfterFood,
+        m.instructions || '-'
+      ]) || [];
+
+      autoTable(doc, {
+        startY: startY,
+        head: [['#', 'Medicine', 'Dosage', 'Frequency', 'Duration', 'Timing', 'Instructions']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 9 },
+        margin: { top: 10 }
+      });
+      
+      let finalY = doc.lastAutoTable.finalY + 10;
+      
+      if (rx.notes) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Additional Notes:', 20, finalY);
+        doc.setFont(undefined, 'normal');
+        const splitNotes = doc.splitTextToSize(rx.notes, 170);
+        doc.text(splitNotes, 20, finalY + 7);
+        finalY += (splitNotes.length * 7) + 5;
+      }
+      
+      if (rx.followUpDate) {
+        doc.setFont(undefined, 'bold');
+        doc.text(`Follow-up Date: ${new Date(rx.followUpDate).toLocaleDateString()}`, 20, finalY);
+        finalY += 10;
+      }
+      
+      doc.line(20, 270, 190, 270);
+      doc.text(`Doctor Signature: _______________________`, 130, 280);
+      
+      doc.save(`prescription-${rx._id.substring(0,8)}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
+      alert("Failed to generate PDF. Please try again later.");
+    }
+  };
 
   const handleAcceptDelay = async (aptId) => {
     setDelayActions(prev => ({ ...prev, [aptId]: 'loading' }));
@@ -64,6 +158,26 @@ const PatientDashboard = () => {
     } catch (err) {
       toast.error('Failed to submit request. Please try again.');
       setDelayActions(prev => ({ ...prev, [aptId]: null }));
+    }
+  };
+
+  const handleReviewSubmit = async (aptId) => {
+    if (reviewRating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+    try {
+      await apiJson('/api/reviews', {
+        method: 'POST',
+        body: JSON.stringify({ appointmentId: aptId, rating: reviewRating, comment: reviewComment })
+      });
+      toast.success('Thank you for your review!');
+      setReviewingAptId(null);
+      setReviewRating(0);
+      setReviewComment('');
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit review');
     }
   };
 
@@ -277,15 +391,13 @@ const PatientDashboard = () => {
                           <FiFileText size={18} />
                         </div>
                         <div>
-                          <p className="font-bold text-slate-800">Dr. {rx.doctorName}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">ID: {rx.verificationId} · {formatDate(rx.consultationDate)}</p>
+                          <p className="font-bold text-slate-800">Dr. {rx.doctor?.name || rx.doctorName || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">ID: {rx._id.substring(0,8)} · {formatDate(rx.date || rx.consultationDate)}</p>
                         </div>
                       </div>
-                      <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/prescriptions/${rx._id}/pdf`} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" size="sm" className="!rounded-lg hover:!bg-medical-50 border border-slate-200">
-                          <FiDownload className="mr-1.5" /> PDF
-                        </Button>
-                      </a>
+                      <Button variant="secondary" size="sm" className="!rounded-lg hover:!bg-medical-50 border border-slate-200" onClick={(e) => handleDownloadPdf(e, rx)}>
+                        <FiDownload className="mr-1.5" /> PDF
+                      </Button>
                     </Card>
                   ))}
                 </div>
@@ -324,12 +436,65 @@ const PatientDashboard = () => {
                   </div>
                 ) : (
                   pastAppointments.slice(0, 4).map((apt) => (
-                    <div key={apt._id} className="p-3 bg-slate-50 rounded-xl flex justify-between items-center border border-slate-100">
-                      <div>
-                        <p className="font-semibold text-slate-700 text-sm">{apt.doctor?.name || 'Consultation'}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{formatDate(apt.date)}</p>
+                    <div key={apt._id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-slate-700 text-sm">{apt.doctor?.name || 'Consultation'}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{formatDate(apt.date)}</p>
+                        </div>
+                        {apt.isReviewed ? (
+                          <div className="flex items-center text-yellow-500 bg-yellow-50 px-2 py-1 rounded-md text-xs font-bold border border-yellow-100">
+                            <FiStar className="fill-current mr-1" /> Reviewed
+                          </div>
+                        ) : apt.status === 'completed' ? (
+                          <button 
+                            onClick={() => {
+                              setReviewingAptId(reviewingAptId === apt._id ? null : apt._id);
+                              setReviewRating(0);
+                              setReviewComment('');
+                            }}
+                            className="text-xs font-bold px-2 py-1 bg-medical-50 text-medical-600 rounded-md hover:bg-medical-100 transition-colors border border-medical-200"
+                          >
+                            Rate Visit
+                          </button>
+                        ) : (
+                          <span className="text-xs font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md capitalize">{apt.status}</span>
+                        )}
                       </div>
-                      <span className="text-xs font-bold px-2 py-1 bg-medical-100 text-medical-700 rounded-lg">Done</span>
+                      
+                      {/* Review Inline Form */}
+                      <AnimatePresence>
+                        {reviewingAptId === apt._id && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }} 
+                            animate={{ height: 'auto', opacity: 1 }} 
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden mt-1 pt-2 border-t border-slate-200"
+                          >
+                            <div className="flex justify-center gap-1 mb-2">
+                              {[1,2,3,4,5].map(star => (
+                                <FiStar 
+                                  key={star} 
+                                  className={`text-xl cursor-pointer transition-colors ${reviewRating >= star ? 'text-yellow-400 fill-current' : 'text-slate-300'}`}
+                                  onClick={() => setReviewRating(star)}
+                                />
+                              ))}
+                            </div>
+                            <textarea 
+                              className="w-full text-xs p-2 rounded-md border border-slate-200 mb-2 focus:ring-1 focus:ring-medical-500 focus:border-medical-500 outline-none"
+                              placeholder="Add an optional comment..."
+                              rows="2"
+                              value={reviewComment}
+                              onChange={(e) => setReviewComment(e.target.value)}
+                              maxLength={500}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => setReviewingAptId(null)} className="text-xs px-3 py-1.5 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+                              <button onClick={() => handleReviewSubmit(apt._id)} className="text-xs px-3 py-1.5 bg-medical-600 text-white rounded-md hover:bg-medical-700 font-medium shadow-sm">Submit</button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))
                 )}

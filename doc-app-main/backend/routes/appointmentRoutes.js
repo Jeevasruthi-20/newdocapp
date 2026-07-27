@@ -7,6 +7,7 @@ const EmailLog = require('../models/EmailLog');
 const Notification = require('../models/Notification');
 const { protect } = require('../middleware/authMiddleware');
 const emailService = require('../services/emailService');
+const { formatDoctorName } = require('../utils/formatters');
 
 /* ─── GET /api/appointments/available-slots ─────────────────────────────────
    Returns array of available Slot objects for a doctor on a date.
@@ -162,14 +163,14 @@ router.post('/', async (req, res) => {
       console.log("PATIENT DETAILS:", patient?.email);
       console.log("DOCTOR DETAILS:", doctorName);
 
-      await emailService.sendBookingPendingEmail(
+      emailService.sendBookingPendingEmail(
         patient.email, 
         patient.name, 
         doctorName, 
         populated.date, 
         populated.startTime, 
         populated.consultationType
-      );
+      ).catch(err => console.error("Background email error:", err));
       
       // Notify Admin
       const AdminNotification = require('../models/AdminNotification');
@@ -178,6 +179,15 @@ router.post('/', async (req, res) => {
         message: `New appointment booked by ${patient.name} for ${populated.date.toDateString()} at ${populated.startTime}`,
         relatedAppointmentId: populated._id
       });
+      
+      // Notify Patient
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        receiverId: req.user._id,
+        receiverRole: 'patient',
+        message: `Appointment booked successfully for ${populated.date.toDateString()} at ${populated.startTime} with ${doctorName}.`
+      });
+
     } catch (emailErr) {
       console.error('[Booking] Email/log error (non-fatal):', emailErr.message);
     }
@@ -316,7 +326,7 @@ router.put('/:id/reschedule', async (req, res) => {
         </div>
         <div style="padding:24px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
           <p>Dear <strong>${patientName}</strong>,</p>
-          <p>Your appointment with <strong>Dr. ${doctorName}</strong> has been rescheduled.</p>
+          <p>Your appointment with <strong>${formatDoctorName(doctorName)}</strong> has been rescheduled.</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0">
             <tr style="background:#f8fafc">
               <td style="padding:10px;font-weight:bold;color:#64748b">Previous Date</td>
@@ -344,7 +354,7 @@ router.put('/:id/reschedule', async (req, res) => {
           <h2 style="color:#fff;margin:0">🔔 Patient Rescheduled an Appointment</h2>
         </div>
         <div style="padding:24px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
-          <p>Dear <strong>Dr. ${doctorName}</strong>,</p>
+          <p>Dear <strong>${formatDoctorName(doctorName)}</strong>,</p>
           <p>Your patient <strong>${patientName}</strong> has rescheduled their appointment.</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0">
             <tr style="background:#f8fafc">
@@ -471,7 +481,7 @@ router.put('/:id/reschedule-from-delay', async (req, res) => {
       await emailService.sendRawEmail(
         patient.email,
         'MedConnect - Reschedule Requested',
-        `<h2>Reschedule Request Confirmed</h2><p>Dear ${patient.name}, your reschedule request for the appointment with Dr. ${appointment.doctor?.name} has been noted. Our team will contact you shortly to find a new time.</p>`
+        `<h2>Reschedule Request Confirmed</h2><p>Dear ${patient.name}, your reschedule request for the appointment with ${formatDoctorName(appointment.doctor?.name)} has been noted. Our team will contact you shortly to find a new time.</p>`
       );
     } catch (emailErr) {
       console.error('[Reschedule] Email error (non-fatal):', emailErr.message);
@@ -602,7 +612,7 @@ router.put('/:id/confirm', async (req, res) => {
     await Notification.create({
       receiverId: appointment.patient,
       receiverRole: 'patient',
-      message: `Your appointment with Dr. ${req.user.name} on ${new Date(appointment.date).toDateString()} has been confirmed.`
+      message: `Your appointment with ${formatDoctorName(req.user.name)} on ${new Date(appointment.date).toDateString()} has been confirmed.`
     });
 
     res.json({ message: 'Appointment confirmed successfully', appointment });
@@ -661,7 +671,7 @@ router.put('/:id/cancel', async (req, res) => {
     await Notification.create({
       receiverId: appointment.patient,
       receiverRole: 'patient',
-      message: `Your appointment with Dr. ${req.user.name} on ${new Date(appointment.date).toDateString()} was cancelled.`
+      message: `Your appointment with ${formatDoctorName(req.user.name)} on ${new Date(appointment.date).toDateString()} was cancelled.`
     });
 
     res.json({ message: 'Appointment cancelled successfully', appointment });
