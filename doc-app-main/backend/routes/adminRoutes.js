@@ -25,8 +25,9 @@ router.get('/patients', async (req, res) => {
 router.get('/appointments', async (req, res) => {
   try {
     const appointments = await Appointment.find()
-      .populate('patient', 'name email phone')
-      .populate('doctor', 'name specialization')
+      .select('+videoRoomId')
+      .populate('patient', 'name email dob phone')
+      .populate('doctor', 'name doctorProfile')
       .sort({ date: -1 });
     res.json(appointments);
   } catch (error) {

@@ -84,7 +84,10 @@ const appointmentSchema = new mongoose.Schema({
   },
   
   // Telemedicine & Prescriptions
-  meetLink: String,
+  videoRoomId: {
+    type: String,
+    select: false
+  },
   prescription: String,
 
   // Status and Tracking

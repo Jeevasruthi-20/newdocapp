@@ -86,6 +86,7 @@ router.get('/my', async (req, res) => {
       : { patient: req.user._id };
       
     const appointments = await Appointment.find(query)
+      .select('+videoRoomId')
       .populate('doctor', 'name doctorProfile')
       .populate('patient', 'name email dob phone')
       .sort({ date: -1 });
@@ -127,7 +128,9 @@ router.post('/', async (req, res) => {
     const count = await Appointment.countDocuments();
     const appointmentNumber = `APT-${String(count + 1).padStart(6, '0')}`;
 
-    const meetLink = type === 'video' ? `https://meet.jit.si/medconnect-${Math.random().toString(36).substring(2, 10)}` : undefined;
+    const reqConsultationType = req.body.consultationType || (type === 'video' ? 'online' : 'offline');
+    const isOnline = reqConsultationType === 'online';
+    const videoRoomId = isOnline ? `medconnect-${appointmentNumber}-${require('crypto').randomBytes(6).toString('hex')}` : undefined;
 
     const appointment = await Appointment.create({
       appointmentNumber,
@@ -138,8 +141,9 @@ router.post('/', async (req, res) => {
       endTime: end,
       reason: reason.trim(),
       appointmentType: appointmentType || 'consultation',
-      type: type || 'in-person',
-      meetLink,
+      type: type || (isOnline ? 'video' : 'in-person'),
+      consultationType: reqConsultationType,
+      videoRoomId,
       status: 'pending',
       payment: { consultationFee: 500, paymentStatus: 'pending' },
       createdBy: req.user._id,

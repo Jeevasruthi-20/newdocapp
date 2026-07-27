@@ -390,6 +390,41 @@ const Appointments = () => {
                         <div className="checked-in-badge">✅ Checked In (Queue #{apt.queueNumber})</div>
                       )}
 
+                      {/* Join Video Call Button for Online Consultations */}
+                      {apt.videoRoomId && apt.status !== 'completed' && apt.status !== 'cancelled' && (() => {
+                        const now = new Date();
+                        const aptDate = getAppointmentDate(apt);
+                        // Calculate start and end Date objects
+                        const [startH, startM] = apt.startTime.split(':').map(Number);
+                        const [endH, endM] = apt.endTime.split(':').map(Number);
+                        const startObj = new Date(aptDate);
+                        startObj.setHours(startH, startM, 0, 0);
+                        const endObj = new Date(aptDate);
+                        endObj.setHours(endH, endM, 0, 0);
+
+                        // Window opens 10 mins before start
+                        const windowOpen = new Date(startObj.getTime() - 10 * 60000);
+                        const isPastEnd = now > endObj;
+                        const isTooEarly = now < windowOpen;
+
+                        if (isPastEnd) return null; // Hide completely after end time
+
+                        return (
+                          <div className="video-btn-container" style={{ display: 'inline-block', position: 'relative' }}>
+                            {isTooEarly ? (
+                              <button className="btn btn-sm" style={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '1px solid #cbd5e1' }} disabled title={`Opens 10 mins before start (${windowOpen.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`}>
+                                🎥 Join Video Call
+                              </button>
+                            ) : (
+                              <a href={`https://meet.jit.si/${apt.videoRoomId}`} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ background: '#3b82f6', color: '#fff', textDecoration: 'none' }}>
+                                🎥 Join Video Call
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+
                       {/* Cancel button — for pending/scheduled only */}
                       {UPCOMING_STATUSES.includes(apt.status) && (
                         <button className="btn outline-btn btn-sm" onClick={() => handleCancelAppointment(apt._id)}>{t('appointments.cancelBtn')}</button>

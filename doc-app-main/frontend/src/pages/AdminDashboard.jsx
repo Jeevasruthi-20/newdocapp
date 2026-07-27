@@ -556,6 +556,26 @@ const AdminDashboard = () => {
                                 {app.status === 'completed' && !app.prescription && (
                                   <button className="approve-btn" style={{ background: '#10b981' }} onClick={() => setPrescriptionTarget(app)}>💊 Add Prescription</button>
                                 )}
+                                {app.videoRoomId && app.status !== 'completed' && app.status !== 'cancelled' && (() => {
+                                  const now = new Date();
+                                  const aptDate = new Date(app.date);
+                                  const [startH, startM] = app.startTime.split(':').map(Number);
+                                  const [endH, endM] = app.endTime.split(':').map(Number);
+                                  const startObj = new Date(aptDate);
+                                  startObj.setHours(startH, startM, 0, 0);
+                                  const endObj = new Date(aptDate);
+                                  endObj.setHours(endH, endM, 0, 0);
+                                  const windowOpen = new Date(startObj.getTime() - 10 * 60000);
+                                  
+                                  if (now > endObj) return null;
+                                  
+                                  return now < windowOpen ? (
+                                    <button className="outline-btn" style={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '4px' }} disabled title={`Opens at ${windowOpen.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}>🎥 Video Call</button>
+                                  ) : (
+                                    <a href={`https://meet.jit.si/${app.videoRoomId}`} target="_blank" rel="noreferrer" className="approve-btn" style={{ background: '#8b5cf6', color: '#fff', textDecoration: 'none', padding: '0.25rem 0.5rem' }}>🎥 Video Call</a>
+                                  );
+                                })()}
+
                                 <button className="outline-btn" style={{ padding: '0.25rem 0.5rem', border: '1px solid #cbd5e0', borderRadius: '4px', background: 'white', cursor: 'pointer' }} onClick={() => handleViewHistory(app)}>🕒 History</button>
                               </div>
                             </td>

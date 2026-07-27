@@ -220,7 +220,9 @@ const Doctors = () => {
         endTime: addMinutes(startTime, 30),
         reason: bookingData.reason.trim(),
         appointmentType: 'consultation',
-        slotId: bookingData.slotId
+        slotId: bookingData.slotId,
+        type: bookingData.type === 'video-call' ? 'video' : 'in-person',
+        consultationType: bookingData.type === 'video-call' ? 'online' : 'offline'
       });
       setShowBookingModal(false);
       toast.success("Appointment booked successfully!");
