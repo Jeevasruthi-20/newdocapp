@@ -2,6 +2,11 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   // Authentication
   email: { 
     type: String, 
@@ -28,17 +33,17 @@ const userSchema = new mongoose.Schema({
   },
   phone: { 
     type: String, 
-    required: true,
+    required: function() { return !this.googleId; },
     trim: true
   },
   dob: { 
     type: Date, 
-    required: true 
+    required: function() { return !this.googleId; }
   },
   gender: {
     type: String,
     enum: ['male', 'female', 'other', 'prefer-not-to-say'],
-    required: true
+    required: function() { return !this.googleId; }
   },
   bloodGroup: {
     type: String,
@@ -151,6 +156,7 @@ const userSchema = new mongoose.Schema({
 
 // Virtual for user's age
 userSchema.virtual('age').get(function() {
+  if (!this.dob) return null;
   const today = new Date();
   const birthDate = new Date(this.dob);
   let age = today.getFullYear() - birthDate.getFullYear();
