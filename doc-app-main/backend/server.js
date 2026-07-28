@@ -32,22 +32,14 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // Allows loading images from frontend
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-  message: { success: false, message: 'Too many requests from this IP, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
-});
-app.use("/api", limiter);
+
 
 // Middleware — allow CRA dev server on any localhost port (3000, 3001, 3002, …)
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:3002",
+  "https://newdocapp.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -69,6 +61,18 @@ if (process.env.NODE_ENV === 'production') {
   // Development: allow all origins (or use CRA proxy with same-origin requests)
   app.use(cors({ origin: true, credentials: true }));
 }
+
+// Rate Limiting (must be after CORS)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+  message: { success: false, message: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+});
+app.use("/api", limiter);
+
 app.use(express.json());
 
 // Session configuration

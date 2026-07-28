@@ -6,6 +6,7 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "../firebaseConfig";
 import { useAuth } from "../context/AuthContext";
+import { API_BASE } from "../lib/api";
 import "./Login.css";
 
 const Login = () => {
@@ -53,38 +54,8 @@ const Login = () => {
     }
   };
 
-  // Google login
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    setError("");
-    setSuccess("");
-    
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      
-      // Pass the Firebase user data to our backend to generate JWT tokens
-      await socialLogin({
-        email: result.user.email,
-        name: result.user.displayName,
-        uid: result.user.uid,
-        provider: 'google'
-      });
-      
-      setSuccess("Logged in with Google successfully!");
-      setTimeout(() => navigate("/dashboard"), 1000);
-    } catch (error) {
-      let errorMessage = "Google login failed";
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "Login popup was closed. Please try again.";
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = "Popup was blocked. Please allow popups for this site.";
-      } else {
-        errorMessage = error.message;
-      }
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   // Forgot password
