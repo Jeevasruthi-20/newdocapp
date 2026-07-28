@@ -2,12 +2,7 @@
  * In development, use same-origin requests (CRA proxies to backend).
  * In production, set REACT_APP_API_URL (e.g. https://api.yourdomain.com).
  */
-export const API_BASE =
-  process.env.REACT_APP_API_URL !== undefined
-    ? process.env.REACT_APP_API_URL
-    : process.env.NODE_ENV === 'production'
-      ? 'http://localhost:5000'
-      : '';
+export const API_BASE = process.env.REACT_APP_API_URL || import.meta.env?.VITE_API_URL || "http://localhost:5000";
 
 const TOKEN_KEY = 'medconnect_access_token';
 const REFRESH_KEY = 'medconnect_refresh_token';

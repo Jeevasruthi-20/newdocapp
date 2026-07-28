@@ -2,6 +2,7 @@ import React from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE } from '../lib/api';
 import './GoogleLoginButton.css';
 
 const GoogleLoginButton = ({ buttonText = 'Continue with Google' }) => {
@@ -9,8 +10,8 @@ const GoogleLoginButton = ({ buttonText = 'Continue with Google' }) => {
   const { setCurrentUser } = useAuth();
 
   const handleGoogleLogin = () => {
-    // Redirect to backend Google OAuth endpoint
-    window.location.href = 'http://localhost:5000/auth/google';
+    // Redirects browser to backend which initiates passport-google-oauth20 flow
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   // Check for user data in URL after OAuth redirect

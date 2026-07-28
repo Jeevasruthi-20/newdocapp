@@ -18,7 +18,6 @@ import Prescriptions from './pages/Prescriptions';
 import AdminDashboard from './pages/AdminDashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import BillingCalculator from './pages/BillingCalculator';
 import SymptomChecker from './pages/SymptomChecker';
 import HealthTimeline from './pages/HealthTimeline';
 import Notifications from './pages/Notifications';
@@ -53,7 +52,6 @@ const App = () => (
                 <Route path="/appointments" element={<Appointments />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/prescriptions" element={<Prescriptions />} />
-                <Route path="/billing" element={<BillingCalculator />} />
                 <Route path="/health-timeline" element={<HealthTimeline />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/notifications" element={<Notifications />} />
