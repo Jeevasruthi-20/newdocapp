@@ -198,24 +198,28 @@
   .hero-content {
     grid-template-columns: 1fr;
     text-align: center;
+    padding: 2rem 0;
   }
   .hero-text {
     max-width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 0 1rem;
   }
-  .hero-subtitle { max-width: 600px; }
+  .hero-subtitle { max-width: 600px; padding: 0 1rem; }
   .hero-stats { justify-content: center; }
   .hero-actions { justify-content: center; }
   .hero-visual {
     margin-top: 3rem;
   }
+  .floating-card { display: none; }
 }
 
 @media (max-width: 480px) {
-  .hero-title { font-size: 2.5rem; }
+  .hero-title { font-size: 2.2rem; padding: 0 1rem; }
+  .hero-subtitle { font-size: 1rem; }
   .hero-stats { gap: 1.5rem; flex-wrap: wrap; }
-  .hero-actions { flex-direction: column; }
+  .hero-actions { flex-direction: column; width: 90%; margin: 0 auto; }
   .hero-actions .btn { width: 100%; }
 }

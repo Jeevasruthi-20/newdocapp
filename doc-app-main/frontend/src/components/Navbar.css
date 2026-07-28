@@ -280,7 +280,12 @@
     background: var(--accent-primary);
     border-radius: 2px;
     transition: 0.3s;
+    position: relative;
+    transform-origin: center;
   }
+  .mobile-menu-toggle.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+  .mobile-menu-toggle.active span:nth-child(2) { opacity: 0; }
+  .mobile-menu-toggle.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
   
   .nav-menu {
     position: fixed;
@@ -293,6 +298,7 @@
     transform: translateX(100%);
     transition: 0.4s cubic-bezier(0.25, 1, 0.25, 1);
     align-items: flex-start;
+    z-index: 1000;
   }
   
   .nav-menu.active { transform: translateX(0); }
