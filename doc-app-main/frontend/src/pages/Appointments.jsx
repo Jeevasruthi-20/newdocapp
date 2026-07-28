@@ -6,7 +6,6 @@ import { toast } from "react-hot-toast";
 import {
   UPCOMING_STATUSES,
   getAppointmentDate,
-  formatTime12,
 } from "../utils/appointmentHelpers";
 import RatingModal, { getRating } from "../components/RatingModal";
 import RescheduleModal from "../components/RescheduleModal";

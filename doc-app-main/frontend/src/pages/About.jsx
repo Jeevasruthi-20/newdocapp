@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  FiHeart, FiShield, FiUsers, FiClock, FiAward, FiCheckCircle, FiUserCheck, FiStar, FiActivity
+  FiHeart, FiShield, FiUsers, FiClock, FiAward, FiCheckCircle, FiUserCheck, FiStar
 } from 'react-icons/fi';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
