@@ -23,6 +23,58 @@ router.get('/available-slots', async (req, res) => {
     queryDate.setHours(0, 0, 0, 0);
 
     const Slot = require('../models/Slot');
+    
+    // Check if slots exist for this date
+    let slotCount = await Slot.countDocuments({ doctor: doctorId, date: queryDate });
+    
+    if (slotCount === 0) {
+      // Lazy generation
+      const DoctorSchedule = require('../models/DoctorSchedule');
+      const Appointment = require('../models/Appointment');
+      const schedule = await DoctorSchedule.findOne({ doctor: doctorId });
+      
+      if (schedule) {
+        const isBlocked = schedule.blockedDates && schedule.blockedDates.some(b => {
+          const bDate = new Date(b.date);
+          bDate.setHours(0,0,0,0);
+          return bDate.getTime() === queryDate.getTime();
+        });
+        
+        if (!isBlocked) {
+          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          const dayName = days[queryDate.getDay()];
+          const dayHours = schedule.weeklyHours && schedule.weeklyHours[dayName];
+          
+          if (dayHours && dayHours.isWorking && dayHours.start && dayHours.end) {
+            let [h, m] = dayHours.start.split(':').map(Number);
+            let endMins = dayHours.end.split(':');
+            const endTotalMins = Number(endMins[0]) * 60 + Number(endMins[1]);
+            const duration = schedule.slotDuration || 20;
+            const buffer = schedule.bufferTime || 5;
+
+            while (h * 60 + m + duration <= endTotalMins) {
+              const startTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+              const slotEndMins = h * 60 + m + duration;
+              const endTimeStr = `${String(Math.floor(slotEndMins / 60)).padStart(2, '0')}:${String(slotEndMins % 60).padStart(2, '0')}`;
+
+              await Slot.findOneAndUpdate(
+                { doctor: doctorId, date: queryDate, startTime: startTimeStr },
+                {
+                  $setOnInsert: { endTime: endTimeStr },
+                  $set: { isBooked: false, appointment: null }
+                },
+                { upsert: true }
+              );
+
+              const nextTotal = slotEndMins + buffer;
+              h = Math.floor(nextTotal / 60);
+              m = nextTotal % 60;
+            }
+          }
+        }
+      }
+    }
+
     const availableSlots = await Slot.find({
       doctor: doctorId,
       date: queryDate,
