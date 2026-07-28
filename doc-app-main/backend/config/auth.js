@@ -40,10 +40,18 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         let user = await User.findOne({ googleId: profile.id });
         
         if (!user) {
+          const randomPassword = await bcrypt.hash(
+            profile.id + Date.now().toString(),
+            10
+          );
+
           user = new User({
             googleId: profile.id,
             name: profile.displayName,
             email: profile.emails[0].value,
+            password: randomPassword,
+            profileImage: profile.photos?.[0]?.value || null,
+            isEmailVerified: true,
             provider: 'google'
           });
           await user.save();
