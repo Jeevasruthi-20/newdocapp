@@ -293,7 +293,7 @@
     width: 300px; height: 100vh;
     background: var(--bg-card);
     flex-direction: column;
-    padding: 6rem 2rem;
+    padding: 6rem 1.5rem;
     box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05);
     transform: translateX(100%);
     transition: 0.4s cubic-bezier(0.25, 1, 0.25, 1);
@@ -302,8 +302,41 @@
   }
   
   .nav-menu.active { transform: translateX(0); }
-  .nav-links { flex-direction: column; align-items: flex-start; width: 100%; }
-  .nav-links a { width: 100%; padding: 1rem; font-size: 1.1rem; }
-  .nav-auth { width: 100%; flex-direction: column; margin-top: 1rem; }
-  .nav-auth .btn { width: 100%; }
+  .nav-links { flex-direction: column; align-items: flex-start; width: 100%; gap: 0.25rem; }
+  .nav-links a { width: 100%; padding: 0.75rem 1rem; font-size: 1.1rem; }
+  
+  .theme-toggle-li {
+    padding: 0.5rem 1rem;
+    width: 100%;
+  }
+  .nav-links > li:last-child {
+    padding: 0.5rem 1rem;
+    width: 100%;
+  }
+
+  .nav-auth { 
+    width: 100%; 
+    flex-direction: column; 
+    align-items: flex-start; 
+    margin-top: 1rem; 
+    padding: 0 1rem;
+  }
+  .nav-auth .btn { width: 100%; margin-bottom: 0.5rem; }
+  
+  .user-menu-container { width: 100%; }
+  .user-menu-trigger { width: 100%; justify-content: flex-start; }
+  .user-menu {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+    padding: 0.5rem 0;
+    display: none;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+  }
+  .user-menu.active {
+    display: block;
+  }
 }
